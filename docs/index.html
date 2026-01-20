@@ -3,91 +3,84 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>risk-checker | public demo</title>
+    <title>risk-checker (demo)</title>
     <style>
       body {
         font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
         margin: 24px;
-        line-height: 1.7;
-        color: #111;
+        line-height: 1.6;
       }
-      .container {
+      .box {
         max-width: 760px;
       }
       h1 {
-        font-size: 24px;
-        margin: 12px 0;
+        font-size: 22px;
+        margin: 8px 0 12px;
       }
       .tag {
         display: inline-block;
-        padding: 2px 12px;
+        padding: 2px 10px;
         border: 1px solid #ccc;
         border-radius: 999px;
         font-size: 12px;
-        color: #555;
       }
       .note {
         background: #f7f7f7;
         border: 1px solid #e5e5e5;
-        padding: 14px 16px;
+        padding: 12px 14px;
         border-radius: 10px;
-        margin: 18px 0;
+        margin: 14px 0;
       }
       ul {
-        margin: 10px 0 0 18px;
+        margin: 8px 0 0 18px;
       }
       li {
-        margin: 6px 0;
+        margin-bottom: 6px;
       }
       a {
         color: inherit;
         text-decoration: underline;
       }
-      footer {
-        margin-top: 32px;
-        font-size: 12px;
-        color: #666;
-      }
     </style>
   </head>
 
   <body>
-    <div class="container">
-      <span class="tag">public demo / WIP</span>
+    <div class="box">
+      <span class="tag">public demo (WIP)</span>
       <h1>risk-checker</h1>
 
       <div class="note">
-        <strong>重要：</strong><br />
-        このデモは <strong>判断・評価・診断を行いません</strong>。<br />
-        危険な兆候（レッドフラッグ）を<strong>早期に可視化</strong>し、
-        <strong>最終判断を必ず人間に返す</strong>ための設計思想を示すものです。
+        <strong>重要：</strong>
+        このデモは<strong>判断・評価・診断を行いません</strong>。<br />
+        目的は「危険なサインを早めに見つけること」と、
+        「最終判断を必ず人間に返すこと」です。
       </div>
 
       <p>
-        このページは <strong>GitHub Pages</strong> 上の公開入口です。<br />
-        実装・設計・議論は GitHub リポジトリ側で管理します。
+        このページは <strong>GitHub Pages 用の入口</strong>です。<br />
+        実際の挙動確認は下の Demo App から行ってください。
       </p>
 
       <ul>
         <li>
-          <strong>Core repository</strong><br />
-          <a href="https://github.com/risk-checker/risk-checker-core">https://github.com/risk-checker/risk-checker-core</a>
+          <strong>Demo App:</strong>
+          <a href="./app.html">アプリ（app.html）を開く</a>
         </li>
+
         <li>
-          設計ドキュメント：
-          <a href="https://github.com/risk-checker/risk-checker-core/blob/main/README.md">README</a> /
-          <a href="https://github.com/risk-checker/risk-checker-core/blob/main/PRINCIPLES.md">PRINCIPLES</a> /
+          <strong>Core Documents:</strong>
+          <a href="https://github.com/risk-checker/risk-checker-core/blob/main/README.md">README</a>
+          /
+          <a href="https://github.com/risk-checker/risk-checker-core/blob/main/PRINCIPLES.md">PRINCIPLES</a>
+          /
           <a href="https://github.com/risk-checker/risk-checker-core/blob/main/ARCHITECTURE.md">ARCHITECTURE</a>
         </li>
+
         <li>
-          Issues：議題・設計検討・ログ（2chで言う「スレ」に相当）
+          <strong>Issues:</strong>
+          議論（スレッド）として設計・思想を積み上げます
         </li>
       </ul>
-
-      <footer>
-        risk-checker is a safety-oriented design experiment.<br />
-        This project intentionally avoids automated judgment.
-      </footer>
     </div>
   </body>
 </html>
