@@ -10,3 +10,10 @@ This repository prioritizes:
 - safety over optimization
 - structure over individual judgment
 - prevention over blame
+
+## Non-goals (Important)
+This project does NOT:
+- provide medical diagnosis or severity scoring
+- replace clinical judgment or local protocols
+- evaluate or rank people
+- justify punishment or blame using “risk”
