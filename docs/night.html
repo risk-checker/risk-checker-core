@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>risk-checker | night (WIP)</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
+      margin: 24px;
+      line-height: 1.6;
+      background: #fafafa;
+      color: #111;
+    }
+    .box {
+      max-width: 860px;
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      border: 1px solid #e5e5e5;
+    }
+    h1 { margin: 0 0 8px; font-size: 22px; }
+    .note {
+      background: #f7f7f7;
+      border: 1px solid #e5e5e5;
+      padding: 12px 14px;
+      border-radius: 10px;
+      margin: 12px 0;
+    }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    button {
+      padding: 9px 14px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      background: #fff;
+      cursor: pointer;
+    }
+    button:hover { background: #f0f0f0; }
+    button.primary { border-color:#999; }
+    button.danger { border-color:#e0a1a1; }
+    .card {
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 14px;
+      margin: 12px 0;
+      background: #fff;
+    }
+    .q-title { font-weight: 700; margin: 0 0 6px; }
+    .muted { color: #666; font-size: 13px; }
+    .pill {
+      display:inline-block; padding: 2px 10px; border:1px solid #ccc; border-radius:999px; font-size: 12px;
+      margin-left: 6px; color:#555;
+    }
+    .result {
+      padding: 14px;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      background: #fff;
+      margin-top: 12px;
+    }
+    .result.call { background: #fdeaea; border-color: #e0a1a1; }
+    .result.observe { background:#eaf2ff; border-color:#a9c3f0; }
+    .result.sleep { background:#eef7ef; border-color:#a9d4ad; }
+    .hr { height:1px; background:#eee; margin: 14px 0; }
+    .small { font-size: 12px; color:#666; }
+    a { color: inherit; }
+  </style>
+</head>
+
+<body>
+  <div class="box">
+    <h1>night checker (WIP)</h1>
+
+    <div class="note">
+      <strong>注意：</strong>
+      このツールは<strong>診断・評価・判断をしません</strong>。<br/>
+      目的は「危険なサインを早めに拾う」ことと、「最終判断を必ず人間に返す」ことです。<br/>
+      ここで行うのは<strong>Yes/No の事実確認</strong>のみです。
+    </div>
+
+    <div id="view"></div>
+
+    <div class="hr"></div>
+
+    <div class="small">
+      ・このページは試作です。<br/>
+      ・“OK”“安全”などの断定は出しません。<br/>
+      ・必要なら GitHub 上の設計文書に戻る： <a href="https://github.com/risk-checker/risk-checker-core" target="_blank" rel="noreferrer">repo</a>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * --------------------------------------------------------------------
+     *  State machine (最重要)
+     *  - 判断を「人」から外すため、画面遷移を固定する
+     * --------------------------------------------------------------------
+     */
+
+    const STATE = {
+      START: "START",
+      Q6: "Q6",
+      RESULT_CALL: "RESULT_CALL",
+      OBSERVE_30: "OBSERVE_30",
+      OBSERVE_60: "OBSERVE_60",
+      HANDOFF: "HANDOFF",
+      SLEEP_CHECK: "SLEEP_CHECK",
+    };
+
+    // 6問（仮文言。あとで確定）
+    const Q6 = [
+      { id: "q1", text: "反応がない／意識がおかしい（普段ある反応がない）" },
+      { id: "q2", text: "息が苦しい（本人が苦しいと言う／見た目に明らかに苦しそう）" },
+      { id: "q3", text: "出血が止まっていない" },
+      { id: "q4", text: "本人が『耐えられない』と訴える強い痛みがある（普段より明らかに強い）" },
+      { id: "q5", text: "普段歩ける人が、今は歩けない" },
+      { id: "q6", text: "普段は不要な介助なのに、持ち上げた／抱えた動作があった" },
+    ];
+
+    // 睡眠チェック（起こす/起こさないだけ）
+    const SLEEP = [
+      { id: "s1", text: "ベッド/布団など、通常の睡眠位置で横になっている" },
+      { id: "s2", text: "呼吸の動きが目視できる（胸腹部の動き）" },
+      { id: "s3", text: "苦痛の発語（痛い/苦しい/助けて等）が30秒以上連続していない" },
+      { id: "s4", text: "新しい出血・外傷が見える範囲で確認できない" },
+      { id: "s5", text: "首・胸・腹部が強く圧迫/挟まれていない（危険姿勢でない）" },
+    ];
+
+    const model = {
+      state: STATE.START,
+      answers: Object.fromEntries(Q6.map(q => [q.id, null])),   // null / true / false
+      sleep: Object.fromEntries(SLEEP.map(q => [q.id, null])), // null / true / false
+      lastRunAt: null, // 表示用
+    };
+
+    const $view = () => document.getElementById("view");
+
+    function nowText() {
+      const d = new Date();
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    function resetAll() {
+      for (const k of Object.keys(model.answers)) model.answers[k] = null;
+      for (const k of Object.keys(model.sleep)) model.sleep[k] = null;
+      model.lastRunAt = null;
+      model.state = STATE.START;
+      render();
+    }
+
+    function anyYes(obj) {
+      return Object.values(obj).some(v => v === true);
+    }
+
+    function allYes(obj) {
+      return Object.values(obj).every(v => v === true);
+    }
+
+    function setState(next) {
+      model.state = next;
+      render();
+    }
+
+    function render() {
+      const v = $view();
+      v.innerHTML = "";
+
+      if (model.state === STATE.START) {
+        v.appendChild(screenStart());
+        return;
+      }
+      if (model.state === STATE.Q6) {
+        v.appendChild(screenQ6());
+        return;
+      }
+      if (model.state === STATE.RESULT_CALL) {
+        v.appendChild(screenCall());
+        return;
+      }
+      if (model.state === STATE.OBSERVE_30) {
+        v.appendChild(screenObserve(30, STATE.OBSERVE_60));
+        return;
+      }
+      if (model.state === STATE.OBSERVE_60) {
+        v.appendChild(screenObserve(60, STATE.HANDOFF));
+        return;
+      }
+      if (model.state === STATE.SLEEP_CHECK) {
+        v.appendChild(screenSleep());
+        return;
+      }
+      if (model.state === STATE.HANDOFF) {
+        v.appendChild(screenHandoff());
+        return;
+      }
+    }
+
+    /**
+     * Screens
+     */
+
+    function screenStart() {
+      const wrap = div("card");
+      wrap.appendChild(h2("起動（迷ったら起動）"));
+      wrap.appendChild(p(
+        "以下のいずれかが起きたら開始します：\n" +
+        "・本人が体調不良/痛み/違和感を訴えた\n" +
+        "・夜勤が『普段と違う可能性』を感じた\n" +
+        "・転倒/衝突/出血など出来事があった\n" +
+        "・第三者から異変の報告があった"
+      ));
+
+      const r = div("row");
+      r.appendChild(btn("開始（6問へ）", () => {
+        model.lastRunAt = nowText();
+        setState(STATE.Q6);
+      }, "primary"));
+
+      wrap.appendChild(r);
+      wrap.appendChild(div("note", "※ このページは“判断”をしません。Yes/Noの事実確認のみです。"));
+      return wrap;
+    }
+
+    function screenQ6() {
+      const wrap = document.createElement("div");
+
+      // Header
+      const head = div("card");
+      head.appendChild(h2("6問（今この瞬間の事実のみ）"));
+      head.appendChild(div("muted", `最終実行: ${model.lastRunAt ?? "未実行"}`));
+      head.appendChild(div("note",
+        "ルール：Q1〜Q6のどれか1つでも Yes → 『救急車（119）』。\n" +
+        "全て No → 『経過観察（30分→60分）』。\n" +
+        "※ 推測・原因・評価は禁止。"
+      ));
+      wrap.appendChild(head);
+
+      // Questions
+      Q6.forEach((q, i) => {
+        const card = div("card");
+        const title = document.createElement("div");
+        title.className = "q-title";
+        title.textContent = `Q${i+1}. ${q.text}`;
+        card.appendChild(title);
+
+        const r = div("row");
+        r.appendChild(btn("Yes", () => { model.answers[q.id] = true; render(); }, "danger"));
+        r.appendChild(btn("No", () => { model.answers[q.id] = false; render(); }));
+        r.appendChild(spanPill(model.answers[q.id]));
+        card.appendChild(r);
+
+        wrap.appendChild(card);
+      });
+
+      // Actions
+      const foot = div("card");
+      foot.appendChild(h2("判定（自動）"));
+
+      const undecided = Object.values(model.answers).some(v => v === null);
+      const info = div("muted", undecided
+        ? "※ 未回答があります。すべて回答してから確定してください。"
+        : "※ すべて回答済みです。"
+      );
+      foot.appendChild(info);
+
+      const r = div("row");
+
+      r.appendChild(btn("確定する", () => {
+        if (Object.values(model.answers).some(v => v === null)) return;
+        if (anyYes(model.answers)) setState(STATE.RESULT_CALL);
+        else setState(STATE.OBSERVE_30);
+      }, "primary"));
+
+      r.appendChild(btn("寝てしまった（睡眠チェックへ）", () => {
+        // 6問の途中でも移行可（“起こす/起こさない”の補助へ）
+        setState(STATE.SLEEP_CHECK);
+      }));
+
+      r.appendChild(btn("最初からやり直す", () => resetAll()));
+      foot.appendChild(r);
+
+      wrap.appendChild(foot);
+      return wrap;
+    }
+
+    function screenCall() {
+      const wrap = document.createElement("div");
+      const card = div("card");
+      card.appendChild(h2("表示：救急車（119）"));
+      card.appendChild(div("result call",
+        "✅ 条件一致：6問のうち1つ以上が Yes。\n" +
+        "行動：119へ通報。\n" +
+        "注意：搬送先の判断は救急隊へ。ここは判断しない。"
+      ));
+      card.appendChild(div("note",
+        "伝える内容（例）\n" +
+        "・施設名 / 住所\n" +
+        "・年齢・性別（分かる範囲）\n" +
+        "・Yesになった事実（Q番号）\n" +
+        "※ 推測・原因・結論は言わない"
+      ));
+
+      const r = div("row");
+      r.appendChild(btn("6問へ戻る（状況変化）", () => setState(STATE.Q6)));
+      r.appendChild(btn("最初からやり直す", () => resetAll()));
+      card.appendChild(r);
+
+      wrap.appendChild(card);
+      return wrap;
+    }
+
+    function screenObserve(mins, nextState) {
+      const card = div("card");
+      card.appendChild(h2(`表示：経過観察（${mins}分後に再実施）`));
+      card.appendChild(div("result observe",
+        "✅ 条件一致：6問がすべて No。\n" +
+        "行動：固定の経過観察へ。\n" +
+        "※ タイマーは実装しない（現場の時計でOK）。"
+      ));
+
+      const r = div("row");
+      r.appendChild(btn(`${mins}分後の再実施へ進む`, () => {
+        model.lastRunAt = nowText();
+        setState(nextState);
+      }, "primary"));
+
+      r.appendChild(btn("いま悪化/新規事象（最初から6問）", () => {
+        model.lastRunAt = nowText();
+        // 回答は残しても良いが、原則は再起動なので一旦回答クリア
+        for (const k of Object.keys(model.answers)) model.answers[k] = null;
+        setState(STATE.Q6);
+      }, "danger"));
+
+      r.appendChild(btn("寝てしまった（睡眠チェックへ）", () => setState(STATE.SLEEP_CHECK)));
+
+      r.appendChild(btn("最初からやり直す", () => resetAll()));
+      card.appendChild(r);
+
+      card.appendChild(div("note",
+        "補足：経過観察中の連絡・相談は“してもよい”。ただしこの画面の判定を上書きしない。\n" +
+        "（判断を誰かに渡して揺らすのを防ぐため）"
+      ));
+
+      return card;
+    }
+
+    function screenSleep() {
+      const wrap = document.createElement("div");
+      const card = div("card");
+      card.appendChild(h2("睡眠チェック（起こす/起こさないの補助）"));
+      card.appendChild(div("note",
+        "ここで決めるのは『起こす』か『起こさない』のみ。\n" +
+        "救急車の判定はしない。\n" +
+        "不明があれば『起こして6問へ戻す』に倒す。"
+      ));
+      wrap.appendChild(card);
+
+      SLEEP.forEach((q, i) => {
+        const c = div("card");
+        const title = document.createElement("div");
+        title.className = "q-title";
+        title.textContent = `S${i+1}. ${q.text}`;
+        c.appendChild(title);
+
+        const r = div("row");
+        r.appendChild(btn("Yes", () => { model.sleep[q.id] = true; render(); }, "primary"));
+        r.appendChild(btn("No", () => { model.sleep[q.id] = false; render(); }, "danger"));
+        r.appendChild(btn("不明", () => { model.sleep[q.id] = null; render(); }));
+        r.appendChild(spanPill(model.sleep[q.id]));
+        c.appendChild(r);
+
+        wrap.appendChild(c);
+      });
+
+      const decision = div("card");
+      decision.appendChild(h2("結果（自動）"));
+
+      const hasNull = Object.values(model.sleep).some(v => v === null);
+      if (hasNull) {
+        decision.appendChild(div("result sleep",
+          "⚠ 未回答/不明があります。\n" +
+          "不明が残る場合は『起こして6問へ戻す』に倒してください。"
+        ));
+      } else if (allYes(model.sleep)) {
+        decision.appendChild(div("result sleep",
+          "✅ すべて Yes。\n" +
+          "行動：起こさない（睡眠継続）。\n" +
+          "※ 状況変化があれば最初から6問へ。"
+        ));
+      } else {
+        decision.appendChild(div("result sleep",
+          "⚠ 1つ以上 No。\n" +
+          "行動：起こして6問へ戻す（意識/呼吸等の事実確認へ）。"
+        ));
+      }
+
+      const r = div("row");
+      r.appendChild(btn("起こして6問へ戻す", () => {
+        // 睡眠チェックは補助なので、6問側を再起動
+        for (const k of Object.keys(model.answers)) model.answers[k] = null;
+        model.lastRunAt = nowText();
+        setState(STATE.Q6);
+      }, "danger"));
+
+      r.appendChild(btn("起こさない（観察へ）", () => {
+        // “起こさない”は判断ではなく、睡眠継続の行動
+        // ただし不明があるなら戻る方針
+        const hasNull = Object.values(model.sleep).some(v => v === null);
+        if (hasNull) return;
+        if (allYes(model.sleep)) setState(STATE.HANDOFF);
+        else setState(STATE.Q6);
+      }, "primary"));
+
+      r.appendChild(btn("戻る（前の画面へ）", () => {
+        // 戻り先はシンプルに6問へ
+        setState(STATE.Q6);
+      }));
+
+      r.appendChild(btn("最初からやり直す", () => resetAll()));
+
+      decision.appendChild(r);
+      wrap.appendChild(decision);
+
+      return wrap;
+    }
+
+    function screenHandoff() {
+      const card = div("card");
+      card.appendChild(h2("引き継ぎ（夜間の判断をここで止める）"));
+      card.appendChild(div("result observe",
+        "ここから先（翌日通院、家族調整、服薬/生活対応の主体決定）は日勤帯。\n" +
+        "夜勤は『事実』と『実施した対応』だけを残す。"
+      ));
+      card.appendChild(div("note",
+        "残すもの（例）\n" +
+        "・起動時刻 / きっかけ（訴え・転倒等）\n" +
+        "・6問の回答（Yes/No）\n" +
+        "・経過観察の実施（30分/60分）\n" +
+        "・睡眠チェックの有無\n" +
+        "※ 評価・推測・誰が悪いは禁止"
+      ));
+
+      const r = div("row");
+      r.appendChild(btn("6問へ戻る（状況変化）", () => {
+        model.lastRunAt = nowText();
+        for (const k of Object.keys(model.answers)) model.answers[k] = null;
+        setState(STATE.Q6);
+      }));
+      r.appendChild(btn("最初からやり直す", () => resetAll()));
+      card.appendChild(r);
+      return card;
+    }
+
+    /**
+     * UI helpers
+     */
+
+    function h2(text) {
+      const el = document.createElement("div");
+      el.className = "q-title";
+      el.textContent = text;
+      return el;
+    }
+
+    function p(text) {
+      const el = document.createElement("div");
+      el.style.whiteSpace = "pre-wrap";
+      el.textContent = text;
+      return el;
+    }
+
+    function div(className, text) {
+      const el = document.createElement("div");
+      if (className) el.className = className;
+      if (text !== undefined) {
+        el.style.whiteSpace = "pre-wrap";
+        el.textContent = text;
+      }
+      return el;
+    }
+
+    function btn(label, onClick, extraClass) {
+      const b = document.createElement("button");
+      if (extraClass) b.className = extraClass;
+      b.textContent = label;
+      b.onclick = onClick;
+      return b;
+    }
+
+    function spanPill(value) {
+      const s = document.createElement("span");
+      s.className = "pill";
+      if (value === true) s.textContent = "Yes";
+      else if (value === false) s.textContent = "No";
+      else s.textContent = "未回答";
+      return s;
+    }
+
+    // boot
+    render();
+  </script>
+</body>
+</html>
