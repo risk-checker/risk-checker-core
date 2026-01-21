@@ -131,6 +131,8 @@
       answers: Object.fromEntries(Q6.map(q => [q.id, null])),   // null / true / false
       sleep: Object.fromEntries(SLEEP.map(q => [q.id, null])), // null / true / false
       lastRunAt: null, // 表示用
+      recheckRound: 0, // 0=初回,1=30分後,2=60分後
+      nextIfAllNo: STATE.OBSERVE_30, // 次に進む固定フロー（全てNoのとき）
     };
 
     const $view = () => document.getElementById("view");
@@ -145,6 +147,8 @@
       for (const k of Object.keys(model.answers)) model.answers[k] = null;
       for (const k of Object.keys(model.sleep)) model.sleep[k] = null;
       model.lastRunAt = null;
+      model.recheckRound = 0;
+      model.nextIfAllNo = STATE.OBSERVE_30;
       model.state = STATE.START;
       render();
     }
@@ -214,6 +218,8 @@
       const r = div("row");
       r.appendChild(btn("開始（6問へ）", () => {
         model.lastRunAt = nowText();
+        model.recheckRound = 0;
+        model.nextIfAllNo = STATE.OBSERVE_30;
         setState(STATE.Q6);
       }, "primary"));
 
@@ -227,7 +233,7 @@
 
       // Header
       const head = div("card");
-      head.appendChild(h2("6問（今この瞬間の事実のみ）"));
+      head.appendChild(h2(`6問（今この瞬間の事実のみ）${model.recheckRound===0?"（初回）":model.recheckRound===1?"（30分後の再実施）":"（60分後の再実施）"}`));
       head.appendChild(div("muted", `最終実行: ${model.lastRunAt ?? "未実行"}`));
       head.appendChild(div("note",
         "ルール：Q1〜Q6のどれか1つでも Yes → 『救急車（119）』。\n" +
@@ -265,14 +271,16 @@
       foot.appendChild(info);
 
       const r = div("row");
-
       r.appendChild(btn("確定する", () => {
         if (Object.values(model.answers).some(v => v === null)) return;
-        if (anyYes(model.answers)) setState(STATE.RESULT_CALL);
-        else setState(STATE.OBSERVE_30);
+        if (anyYes(model.answers)) {
+          setState(STATE.RESULT_CALL);
+        } else {
+          setState(model.nextIfAllNo);
+        }
       }, "primary"));
 
-      r.appendChild(btn("寝てしまった（睡眠チェックへ）", () => {
+      r.appendChild(btn("寝ている可能性がある（未確定）→睡眠チェックへ", () => {
         // 6問の途中でも移行可（“起こす/起こさない”の補助へ）
         setState(STATE.SLEEP_CHECK);
       }));
@@ -320,9 +328,20 @@
       ));
 
       const r = div("row");
-      r.appendChild(btn(`${mins}分後の再実施へ進む`, () => {
+      r.appendChild(btn(`${mins}分後になったら：6問を再実施する`, () => {
+        // 再実施は必ず6問へ戻す（UIを自然に誘導する）
         model.lastRunAt = nowText();
-        setState(nextState);
+        for (const k of Object.keys(model.answers)) model.answers[k] = null;
+
+        if (mins === 30) {
+          model.recheckRound = 1;
+          model.nextIfAllNo = STATE.OBSERVE_60;
+        } else {
+          model.recheckRound = 2;
+          model.nextIfAllNo = STATE.HANDOFF;
+        }
+
+        setState(STATE.Q6);
       }, "primary"));
 
       r.appendChild(btn("いま悪化/新規事象（最初から6問）", () => {
@@ -332,7 +351,7 @@
         setState(STATE.Q6);
       }, "danger"));
 
-      r.appendChild(btn("寝てしまった（睡眠チェックへ）", () => setState(STATE.SLEEP_CHECK)));
+      r.appendChild(btn("寝ている可能性がある（未確定）→睡眠チェックへ", () => setState(STATE.SLEEP_CHECK)));
 
       r.appendChild(btn("最初からやり直す", () => resetAll()));
       card.appendChild(r);
@@ -348,9 +367,9 @@
     function screenSleep() {
       const wrap = document.createElement("div");
       const card = div("card");
-      card.appendChild(h2("睡眠チェック（起こす/起こさないの補助）"));
+      card.appendChild(h2("睡眠チェック（睡眠か不明のときの補助）"));
       card.appendChild(div("note",
-        "ここで決めるのは『起こす』か『起こさない』のみ。\n" +
+        "ここで決めるのは『起こして確認する』か『起こさず観察を続ける』のみ。\n" +
         "救急車の判定はしない。\n" +
         "不明があれば『起こして6問へ戻す』に倒す。"
       ));
