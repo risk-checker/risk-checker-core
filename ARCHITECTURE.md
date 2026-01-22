@@ -1,11 +1,5 @@
 # ARCHITECTURE
 
-This document describes how decisions, responsibility,
-and information flow are separated in this system.
-Details will be added only when ambiguity appears.
-
-# ARCHITECTURE
-
 本ドキュメントは、risk-checker における
 「判断」「責任」「情報の流れ」を分離するための設計原則を記述する。
 
@@ -49,6 +43,7 @@ risk-checker は以下を行わない。
 状態は単純化された形で提示される。
 
 例：
+
 - 救急対応が必要か否か
 - 経過観察に戻すか否か
 
