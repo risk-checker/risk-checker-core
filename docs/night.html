@@ -242,6 +242,25 @@
       ));
       wrap.appendChild(head);
 
+      // Recheck pre-check (30/60分後の再実施では、まず睡眠/起床状態を確認する導線を上に出す)
+      if (model.recheckRound > 0) {
+        const pre = div("card");
+        pre.appendChild(h2("再確認の前に：起こして確認できる状態か？"));
+        pre.appendChild(div(
+          "note",
+          "30分後/60分後の再確認では、まず『起こして6問を実施できる状態か』を確認します。\n" +
+          "睡眠か不明な場合は、先に睡眠チェックへ進みます（救急車の判定はしない）。"
+        ));
+        const rr = div("row");
+        rr.appendChild(btn("睡眠か不明 → 睡眠チェックへ", () => {
+          setState(STATE.SLEEP_CHECK);
+        }, "primary"));
+        rr.appendChild(btn("起きている/確認できる → このまま6問を続ける", () => {
+          // 何もしない（画面をそのまま）
+        }));
+        pre.appendChild(rr);
+        wrap.appendChild(pre);
+      }
       // Questions
       Q6.forEach((q, i) => {
         const card = div("card");
@@ -280,10 +299,6 @@
         }
       }, "primary"));
 
-      r.appendChild(btn("寝ている可能性がある（未確定）→睡眠チェックへ", () => {
-        // 6問の途中でも移行可（“起こす/起こさない”の補助へ）
-        setState(STATE.SLEEP_CHECK);
-      }));
 
       r.appendChild(btn("最初からやり直す", () => resetAll()));
       foot.appendChild(r);
