@@ -5,64 +5,179 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>risk-checker | night (WIP)</title>
   <style>
+    /* -------------------------------------------------
+       Theme system (auto / light / dark)
+       - Fix: button text disappearing in dark mode
+       - Keep UI readable on both PC and mobile
+    ------------------------------------------------- */
+
+    :root {
+      --bg: #fafafa;
+      --fg: #111;
+      --muted: #666;
+
+      --box-bg: #fff;
+      --border: #e5e5e5;
+      --card-border: #ddd;
+
+      --note-bg: #f7f7f7;
+      --note-border: #e5e5e5;
+
+      --btn-bg: #fff;
+      --btn-fg: #111;
+      --btn-border: #ccc;
+      --btn-bg-hover: #f0f0f0;
+
+      --result-call-bg: #fdeaea;
+      --result-call-border: #e0a1a1;
+      --result-observe-bg: #eaf2ff;
+      --result-observe-border: #a9c3f0;
+      --result-sleep-bg: #eef7ef;
+      --result-sleep-border: #a9d4ad;
+    }
+
+    html[data-theme="light"] { color-scheme: light; }
+    html[data-theme="dark"]  { color-scheme: dark; }
+
+    /* Auto follows OS preference */
+    html[data-theme="auto"] { color-scheme: light dark; }
+
+    html[data-theme="dark"] {
+      --bg: #0b0c10;
+      --fg: #f3f4f6;
+      --muted: #a9adb7;
+
+      --box-bg: #0f1117;
+      --border: #2a2f3a;
+      --card-border: #2a2f3a;
+
+      --note-bg: #121624;
+      --note-border: #2a2f3a;
+
+      --btn-bg: #151a24;
+      --btn-fg: #f3f4f6;
+      --btn-border: #2a2f3a;
+      --btn-bg-hover: #1a2030;
+
+      --result-call-bg: #2a1212;
+      --result-call-border: #7a2c2c;
+      --result-observe-bg: #0f1a2f;
+      --result-observe-border: #2b4a86;
+      --result-sleep-bg: #0f2413;
+      --result-sleep-border: #2f6a3a;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      html[data-theme="auto"] {
+        --bg: #0b0c10;
+        --fg: #f3f4f6;
+        --muted: #a9adb7;
+
+        --box-bg: #0f1117;
+        --border: #2a2f3a;
+        --card-border: #2a2f3a;
+
+        --note-bg: #121624;
+        --note-border: #2a2f3a;
+
+        --btn-bg: #151a24;
+        --btn-fg: #f3f4f6;
+        --btn-border: #2a2f3a;
+        --btn-bg-hover: #1a2030;
+
+        --result-call-bg: #2a1212;
+        --result-call-border: #7a2c2c;
+        --result-observe-bg: #0f1a2f;
+        --result-observe-border: #2b4a86;
+        --result-sleep-bg: #0f2413;
+        --result-sleep-border: #2f6a3a;
+      }
+    }
+
+    @media (max-width: 600px){
+      #theme-toggle { display:none; }
+    }
+
     body {
       font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
       margin: 24px;
       line-height: 1.6;
-      background: #fafafa;
-      color: #111;
+      background: var(--bg);
+      color: var(--fg);
     }
+
     .box {
       max-width: 860px;
-      background: #fff;
+      background: var(--box-bg);
       padding: 20px;
       border-radius: 12px;
-      border: 1px solid #e5e5e5;
+      border: 1px solid var(--border);
     }
+
     h1 { margin: 0 0 8px; font-size: 22px; }
+
     .note {
-      background: #f7f7f7;
-      border: 1px solid #e5e5e5;
+      background: var(--note-bg);
+      border: 1px solid var(--note-border);
       padding: 12px 14px;
       border-radius: 10px;
       margin: 12px 0;
     }
-    .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+
+    .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; align-items:center; }
+
     button {
       padding: 9px 14px;
       border-radius: 8px;
-      border: 1px solid #ccc;
-      background: #fff;
+      border: 1px solid var(--btn-border);
+      background: var(--btn-bg);
+      color: var(--btn-fg);
       cursor: pointer;
+      font-weight: 600;
     }
-    button:hover { background: #f0f0f0; }
-    button.primary { border-color:#999; }
-    button.danger { border-color:#e0a1a1; }
+
+    button:hover { background: var(--btn-bg-hover); }
+
+    button.primary { border-color: var(--btn-border); }
+    button.danger { border-color: var(--result-call-border); }
+
     .card {
-      border: 1px solid #ddd;
+      border: 1px solid var(--card-border);
       border-radius: 10px;
       padding: 14px;
       margin: 12px 0;
-      background: #fff;
+      background: var(--box-bg);
     }
+
     .q-title { font-weight: 700; margin: 0 0 6px; }
-    .muted { color: #666; font-size: 13px; }
+    .muted { color: var(--muted); font-size: 13px; }
+
     .pill {
-      display:inline-block; padding: 2px 10px; border:1px solid #ccc; border-radius:999px; font-size: 12px;
-      margin-left: 6px; color:#555;
+      display:inline-block;
+      padding: 2px 10px;
+      border:1px solid var(--btn-border);
+      border-radius:999px;
+      font-size: 12px;
+      margin-left: 6px;
+      color: var(--muted);
     }
+
     .result {
       padding: 14px;
       border-radius: 10px;
-      border: 1px solid #ddd;
-      background: #fff;
+      border: 1px solid var(--card-border);
+      background: var(--box-bg);
       margin-top: 12px;
+      white-space: pre-wrap;
     }
-    .result.call { background: #fdeaea; border-color: #e0a1a1; }
-    .result.observe { background:#eaf2ff; border-color:#a9c3f0; }
-    .result.sleep { background:#eef7ef; border-color:#a9d4ad; }
-    .hr { height:1px; background:#eee; margin: 14px 0; }
-    .small { font-size: 12px; color:#666; }
+
+    .result.call { background: var(--result-call-bg); border-color: var(--result-call-border); }
+    .result.observe { background: var(--result-observe-bg); border-color: var(--result-observe-border); }
+    .result.sleep { background: var(--result-sleep-bg); border-color: var(--result-sleep-border); }
+
+    .hr { height:1px; background: var(--border); margin: 14px 0; }
+    .small { font-size: 12px; color: var(--muted); }
+
     a { color: inherit; }
   </style>
 </head>
@@ -70,6 +185,7 @@
 <body>
   <div class="box">
     <h1>night checker (WIP)</h1>
+    <div id="theme-toggle" class="row small" style="justify-content:flex-end"></div>
 
     <div class="note">
       <strong>注意：</strong>
@@ -133,6 +249,7 @@
       lastRunAt: null, // 表示用
       recheckRound: 0, // 0=初回,1=30分後,2=60分後
       nextIfAllNo: STATE.OBSERVE_30, // 次に進む固定フロー（全てNoのとき）
+      returnAfterSleep: STATE.Q6, // 睡眠チェック後に戻す画面（導線固定）
     };
 
     const $view = () => document.getElementById("view");
@@ -149,6 +266,7 @@
       model.lastRunAt = null;
       model.recheckRound = 0;
       model.nextIfAllNo = STATE.OBSERVE_30;
+      model.returnAfterSleep = STATE.Q6;
       model.state = STATE.START;
       render();
     }
@@ -253,6 +371,7 @@
         ));
         const rr = div("row");
         rr.appendChild(btn("睡眠か不明 → 睡眠チェックへ", () => {
+          model.returnAfterSleep = STATE.Q6;
           setState(STATE.SLEEP_CHECK);
         }, "primary"));
         rr.appendChild(btn("起きている/確認できる → このまま6問を続ける", () => {
@@ -366,7 +485,10 @@
         setState(STATE.Q6);
       }, "danger"));
 
-      r.appendChild(btn("寝ている可能性がある（未確定）→睡眠チェックへ", () => setState(STATE.SLEEP_CHECK)));
+      r.appendChild(btn("寝ている可能性がある（未確定）→睡眠チェックへ", () => {
+        model.returnAfterSleep = nextState;
+        setState(STATE.SLEEP_CHECK);
+      }));
 
       r.appendChild(btn("最初からやり直す", () => resetAll()));
       card.appendChild(r);
@@ -384,9 +506,10 @@
       const card = div("card");
       card.appendChild(h2("睡眠チェック（睡眠か不明のときの補助）"));
       card.appendChild(div("note",
-        "ここで決めるのは『起こして確認する』か『起こさず観察を続ける』のみ。\n" +
+        "ここで決めるのは『起こして6問を実施する』か『起こさず観察を続ける』のみ。\n" +
         "救急車の判定はしない。\n" +
-        "不明があれば『起こして6問へ戻す』に倒す。"
+        "不明が1つでもあれば『起こして6問へ戻す』に倒す。\n" +
+        "（表示とボタンが矛盾しないよう、結果に応じて出るボタンを自動で絞ります）"
       ));
       wrap.appendChild(card);
 
@@ -430,26 +553,38 @@
       }
 
       const r = div("row");
-      r.appendChild(btn("起こして6問へ戻す", () => {
-        // 睡眠チェックは補助なので、6問側を再起動
-        for (const k of Object.keys(model.answers)) model.answers[k] = null;
-        model.lastRunAt = nowText();
-        setState(STATE.Q6);
-      }, "danger"));
 
-      r.appendChild(btn("起こさない（観察へ）", () => {
-        // “起こさない”は判断ではなく、睡眠継続の行動
-        // ただし不明があるなら戻る方針
-        const hasNull = Object.values(model.sleep).some(v => v === null);
-        if (hasNull) return;
-        if (allYes(model.sleep)) setState(STATE.HANDOFF);
-        else setState(STATE.Q6);
-      }, "primary"));
+      const hasNull2 = Object.values(model.sleep).some(v => v === null);
+      const allYes2 = !hasNull2 && allYes(model.sleep);
 
-      r.appendChild(btn("戻る（前の画面へ）", () => {
-        // 戻り先はシンプルに6問へ
-        setState(STATE.Q6);
-      }));
+      // ルール：表示（自動）とボタンが矛盾しないようにする
+      // - 「すべてYes」＝起こさない（観察継続）を主ボタンにし、「起こして戻す」は出さない
+      // - 不明/Noがある＝起こして6問へ戻すを主ボタンにする
+
+      if (allYes2) {
+        r.appendChild(btn("起こさない（観察を続ける）", () => {
+          // 観察継続：次の段階へ（30→60→日勤）
+          setState(model.returnAfterSleep);
+        }, "primary"));
+
+        r.appendChild(btn("状況変化があれば：最初から6問へ", () => {
+          for (const k of Object.keys(model.answers)) model.answers[k] = null;
+          model.lastRunAt = nowText();
+          setState(STATE.Q6);
+        }));
+
+      } else {
+        r.appendChild(btn("起こして6問へ戻す", () => {
+          // 睡眠チェックは補助なので、6問側を再起動
+          for (const k of Object.keys(model.answers)) model.answers[k] = null;
+          model.lastRunAt = nowText();
+          setState(STATE.Q6);
+        }, "primary"));
+
+        r.appendChild(btn("戻る（前の画面へ）", () => {
+          setState(STATE.Q6);
+        }));
+      }
 
       r.appendChild(btn("最初からやり直す", () => resetAll()));
 
@@ -533,6 +668,52 @@
 
     // boot
     render();
+
+    // -------------------------------------------------
+    // Theme toggle (PC only): auto / light / dark
+    // -------------------------------------------------
+    const THEME_KEY = "night-theme"; // auto | light | dark
+
+    function applyTheme(mode){
+      document.documentElement.dataset.theme = mode;
+      localStorage.setItem(THEME_KEY, mode);
+    }
+
+    function renderThemeToggle(){
+      const wrap = document.getElementById("theme-toggle");
+      if(!wrap) return;
+
+      // Clear
+      wrap.innerHTML = "";
+
+      const label = document.createElement("span");
+      label.textContent = "表示モード：";
+      label.style.marginRight = "6px";
+      wrap.appendChild(label);
+
+      const options = [
+        { mode: "auto",  text: "自動" },
+        { mode: "light", text: "ライト" },
+        { mode: "dark",  text: "ダーク" },
+      ];
+
+      options.forEach(({mode, text})=>{
+        const b = document.createElement("button");
+        b.type = "button";
+        b.textContent = text;
+        b.setAttribute("aria-label", `表示モード: ${text}`);
+        b.onclick = ()=>applyTheme(mode);
+        wrap.appendChild(b);
+      });
+    }
+
+    function initTheme(){
+      const saved = localStorage.getItem(THEME_KEY) || "auto";
+      document.documentElement.dataset.theme = saved;
+    }
+
+    initTheme();
+    renderThemeToggle();
   </script>
 </body>
 </html>
