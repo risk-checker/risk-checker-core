@@ -261,6 +261,24 @@
     .hr { height:1px; background: var(--border); margin: 14px 0; }
     .small { font-size: 12px; color: var(--muted); }
 
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      background: var(--box-bg);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--fg);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+      z-index: 9999;
+    }
+
+    .toast.hidden { display: none; }
+
     a { color: inherit; }
   </style>
 </head>
@@ -322,16 +340,24 @@
       { id: "s3", text: "顔（鼻・口）が塞がっていない／胸や腹が何かに押しつぶされていない" },
     ];
 
+    const MEDICATION_EVENTS = [
+      { id: "med1", label: "飲んだ内容が確認できない" },
+      { id: "med2", label: "本人の薬ではないものを飲んだ" },
+      { id: "med3", label: "決められた量より多く飲んだことが確認されている" },
+    ];
+
     const model = {
       state: STATE.START,
       answers: Object.fromEntries(Q6.map(q => [q.id, null])),   // null / true / false
       sleep: Object.fromEntries(SLEEP.map(q => [q.id, null])), // null / true / false
+      medicationEvents: Object.fromEntries(MEDICATION_EVENTS.map(m => [m.id, false])),
       lastRunAt: null,   // 表示用（直近の6問実施時刻）
       firstRunAt: null,  // 初回6問を実施した時刻（30分/60分の基準）
       recheckRound: 0,   // 0=初回,1=30分後,2=60分後
       nextIfAllNo: STATE.OBSERVE_30, // 次に進む固定フロー（全てNoのとき）
       returnAfterSleep: STATE.Q6,    // 睡眠チェック後に戻す画面（導線固定）
       timeline: [],
+      observationStartAt: null,
     };
 
     const $view = () => document.getElementById("view");
@@ -439,12 +465,14 @@
     function resetAll() {
       for (const k of Object.keys(model.answers)) model.answers[k] = null;
       for (const k of Object.keys(model.sleep)) model.sleep[k] = null;
+      for (const k of Object.keys(model.medicationEvents)) model.medicationEvents[k] = false;
       model.lastRunAt = null;
       model.firstRunAt = null;
       model.recheckRound = 0;
       model.nextIfAllNo = STATE.OBSERVE_30;
       model.returnAfterSleep = STATE.Q6;
       model.timeline = [];
+      model.observationStartAt = null;
       model.state = STATE.START;
       render();
     }
@@ -455,6 +483,104 @@
 
     function allYes(obj) {
       return Object.values(obj).every(v => v === true);
+    }
+
+    function selectedMedicationLabels() {
+      return MEDICATION_EVENTS.filter(item => model.medicationEvents[item.id]).map(item => item.label);
+    }
+
+    function formatMedicationLogText() {
+      const start = model.observationStartAt || "（未記録）";
+      const lines = [
+        `観察開始時刻：${start}`,
+        "薬に関する出来事：",
+      ];
+      const labels = selectedMedicationLabels();
+      if (labels.length) {
+        labels.forEach(label => lines.push(`・${label}`));
+      } else {
+        lines.push("・（なし）");
+      }
+      return lines.join("\n");
+    }
+
+    function q6AnswerLines() {
+      const lines = [];
+      Q6.forEach((q, i) => {
+        const v = model.answers[q.id];
+        const mark = v === true ? "はい" : v === false ? "いいえ" : "未回答";
+        lines.push(`Q${i + 1} ${mark}：${q.text.replace(/\n/g, " ")}`);
+      });
+      return lines.join("\n");
+    }
+
+    function sleepAnswerLines() {
+      const lines = [];
+      SLEEP.forEach((q, i) => {
+        const v = model.sleep[q.id];
+        const mark = v === true ? "はい" : v === false ? "いいえ" : "不明";
+        lines.push(`S${i + 1} ${mark}：${q.text.replace(/\n/g, " ")}`);
+      });
+      return lines.join("\n");
+    }
+
+    function buildRecordText(extraTitle) {
+      const t = [];
+      t.push("【夜間対応 記録用テキスト（貼り付け用）】");
+      if (extraTitle) t.push(extraTitle);
+      t.push("");
+      t.push(`施設名：${facilityValue(facility.name)}`);
+      t.push(`住所：${facilityValue(facility.address)}`);
+      t.push(`電話：${facilityValue(facility.phone)}`);
+      t.push("");
+
+      const tl = formatTimelineEntries();
+      t.push("【時刻ログ】");
+      t.push(tl ? tl : "（記録なし）");
+      t.push("");
+
+      const meds = Object.entries(model.medicationEvents)
+        .filter(([, v]) => v)
+        .map(([id]) => {
+          const m = MEDICATION_EVENTS.find(x => x.id === id);
+          return m ? m.label : id;
+        });
+      t.push("【薬の出来事】");
+      t.push(meds.length ? meds.map(x => `・${x}`).join("\n") : "（なし）");
+      t.push("");
+
+      t.push("【6問（最新）】");
+      t.push(q6AnswerLines());
+      t.push("");
+
+      const touchedSleep = Object.values(model.sleep).some(v => v !== null);
+      if (touchedSleep) {
+        t.push("【睡眠チェック（実施した場合）】");
+        t.push(sleepAnswerLines());
+        t.push("");
+      }
+
+      t.push("【現在の表示】");
+      if (model.state === STATE.RESULT_CALL) {
+        const s = yesQuestionSummary();
+        t.push(`救急車（119）／Yesあり：${s.short}`);
+      } else if (model.state === STATE.OBSERVE_30) {
+        t.push("様子を見る（30分後に再チェック）");
+      } else if (model.state === STATE.OBSERVE_60) {
+        t.push("様子を見る（60分後に再チェック）");
+      } else if (model.state === STATE.HANDOFF) {
+        t.push("引き継ぎ（日勤帯へ）");
+      } else if (model.state === STATE.SLEEP_CHECK) {
+        t.push("睡眠チェック（補助）");
+      } else if (model.state === STATE.Q6) {
+        t.push("6問入力中");
+      } else {
+        t.push("開始前");
+      }
+
+      t.push("");
+      t.push("※このテキストは診断・評価ではなく、Yes/Noの事実記録です。");
+      return t.join("\n");
     }
 
     function yesQuestionSummary() {
@@ -485,6 +611,22 @@
         document.execCommand("copy");
         document.body.removeChild(ta);
       }
+    }
+
+    function toast(msg) {
+      let el = document.getElementById("toast");
+      if (!el) {
+        el = document.createElement("div");
+        el.id = "toast";
+        el.className = "toast hidden";
+        document.body.appendChild(el);
+      }
+      el.textContent = msg;
+      el.classList.remove("hidden");
+      clearTimeout(toast._t);
+      toast._t = setTimeout(() => {
+        el.classList.add("hidden");
+      }, 1500);
     }
 
     function setState(next) {
@@ -545,12 +687,61 @@
         const now = nowText();
         model.lastRunAt = now;
         model.firstRunAt = now; // 初回6問の基準時刻
+        model.observationStartAt = now;
         model.recheckRound = 0;
         model.nextIfAllNo = STATE.OBSERVE_30;
         recordTimeline("初回6問実施時刻", now);
+        recordTimeline("観察開始時刻", now);
         setState(STATE.Q6);
       }, "primary big"));
       wrap.appendChild(r);
+
+      // ---- Medication events: start 6Q from a medication incident ----
+      const medCard = div("card");
+      medCard.appendChild(h2("薬の出来事（あてはまるものにチェック）"));
+      medCard.appendChild(div(
+        "muted",
+        "ここで意図（わざと/自傷など）は扱いません。事実だけチェックして、すぐ6問へ。"
+      ));
+
+      MEDICATION_EVENTS.forEach(m => {
+        medCard.appendChild(
+          checkboxRow(m.label, model.medicationEvents[m.id], (v) => {
+            model.medicationEvents[m.id] = v;
+          })
+        );
+      });
+
+      const medRow = div("row");
+      medRow.appendChild(btn("▶ 薬の出来事 → 6問を開始", () => {
+        const now = nowText();
+        model.lastRunAt = now;
+        model.firstRunAt = now;
+        model.observationStartAt = now;
+        model.recheckRound = 0;
+        model.nextIfAllNo = STATE.OBSERVE_30;
+
+        const picked = Object.entries(model.medicationEvents)
+          .filter(([, v]) => v)
+          .map(([id]) => {
+            const mm = MEDICATION_EVENTS.find(x => x.id === id);
+            return mm ? mm.label : id;
+          });
+
+  recordTimeline("薬の出来事", picked.length ? picked.join(" / ") : "（未選択のまま開始）");
+  recordTimeline("初回6問実施時刻", now);
+  recordTimeline("観察開始時刻", now);
+
+        setState(STATE.Q6);
+      }, "primary big"));
+
+      medRow.appendChild(btn("チェック解除", () => {
+        Object.keys(model.medicationEvents).forEach(k => model.medicationEvents[k] = false);
+        render();
+      }));
+
+      medCard.appendChild(medRow);
+      wrap.appendChild(medCard);
 
       // Details are available, but not required to proceed
       const details = document.createElement("details");
@@ -762,14 +953,6 @@
       card.appendChild(primary);
 
       // Show exactly which questions were Yes
-      const yesBox = div(
-        "note",
-        "Yesになった問診（救急隊へ伝える用）：\n" +
-          (summary.lines ? summary.lines : "（なし）")
-      );
-      card.appendChild(yesBox);
-
-      // Minimal script for the call (copyable)
       const now = nowText();
       const callText = [
         "【救急要請（119）】",
@@ -784,22 +967,30 @@
         "※原因の推測や評価は言いません。"
       ].join("\n");
 
-      const copyWrap = div("card");
-      copyWrap.appendChild(h2("救急隊へ伝える（読み上げ/コピペ用）"));
-      copyWrap.appendChild(div("muted", "空欄は口頭で補ってOK。『Yesになった問診』だけ伝える。"));
-      copyWrap.appendChild(div("result", callText));
-
+      const callDetails = document.createElement("details");
+      callDetails.className = "guide";
+      const callSummary = document.createElement("summary");
+      callSummary.textContent = "救急隊へ伝える（読み上げ/コピペ用）";
+      callDetails.appendChild(callSummary);
+      callDetails.appendChild(div("muted", "空欄は口頭で補ってOK。『Yesになった問診』だけ伝える。"));
+      callDetails.appendChild(div("result", callText));
       const cr = div("row");
-      cr.appendChild(btn("コピーする", () => copyText(callText), "primary"));
-      copyWrap.appendChild(cr);
-      card.appendChild(copyWrap);
+      cr.appendChild(btn("コピーする", () => { copyText(callText); toast("コピーしました"); }, "primary"));
+      callDetails.appendChild(cr);
+      card.appendChild(callDetails);
 
       // External contact rule (kept short)
-      card.appendChild(div(
+      const external = document.createElement("details");
+      external.className = "guide";
+      const externalSummary = document.createElement("summary");
+      externalSummary.textContent = "外部連絡（短いルール）";
+      external.appendChild(externalSummary);
+      external.appendChild(div(
         "note",
         "外部（訪問診療/訪問看護）は『状態通知』のみ。判定の相談・上書きはしない。\n" +
           "※搬送先は救急隊。"
       ));
+      card.appendChild(external);
 
       const r = div("row");
       r.appendChild(btn("6問へ戻る（状況変化）", () => setState(STATE.Q6)));
@@ -807,10 +998,12 @@
       card.appendChild(r);
 
       wrap.appendChild(card);
+      appendRecordLogCard(wrap, "（救急車表示）");
       return wrap;
     }
 
     function screenObserve(mins, nextState) {
+      const wrap = document.createElement("div");
       const card = div("card");
 
       // 言葉の置き換え："経過観察" → "様子を見る（再チェック待ち）"
@@ -919,7 +1112,9 @@
         )
       );
 
-      return card;
+      wrap.appendChild(card);
+      appendRecordLogCard(wrap, `（様子を見る ${mins}分後）`);
+      return wrap;
     }
 
     function screenSleep() {
@@ -1039,6 +1234,16 @@
         "※ 評価・推測・誰が悪いは禁止"
       ));
 
+      const recordWrap = div("card");
+      recordWrap.appendChild(h2("記録用（貼り付け）"));
+      recordWrap.appendChild(div("muted", "施設の記録・申し送りにそのまま貼れます。"));
+  const recordText = buildRecordText("（引き継ぎ表示）");
+  recordWrap.appendChild(div("muted", "本文は表示しません（コピーして貼り付けてください）。"));
+  const rr = div("row");
+  rr.appendChild(btn("記録用テキストをコピー", () => { copyText(recordText); toast("コピーしました"); }, "primary"));
+      recordWrap.appendChild(rr);
+      card.appendChild(recordWrap);
+
       const r = div("row");
       r.appendChild(btn("6問へ戻る（状況変化）", () => {
         model.lastRunAt = nowText();
@@ -1048,6 +1253,18 @@
       r.appendChild(btn("最初からやり直す", () => resetAll()));
       card.appendChild(r);
       return card;
+    }
+
+    function appendRecordLogCard(container, extraTitle) {
+      if (!model.observationStartAt) return;
+      const logText = buildRecordText(extraTitle);
+      const logCard = div("card");
+      logCard.appendChild(h2("記録用テキスト"));
+      logCard.appendChild(div("muted", "選択された薬イベントや時刻、問診内容をまとめてコピペできます（画面には表示しません）。"));
+      const logRow = div("row");
+      logRow.appendChild(btn("記録用テキストをコピー", () => { copyText(logText); toast("コピーしました"); }, "primary"));
+      logCard.appendChild(logRow);
+      container.appendChild(logCard);
     }
 
     /**
@@ -1114,6 +1331,23 @@
 
       row.appendChild(l);
       row.appendChild(i);
+      return row;
+    }
+
+    function checkboxRow(label, checked, onChange) {
+      const row = div("row");
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = !!checked;
+      cb.style.width = "20px";
+      cb.style.height = "20px";
+      cb.onchange = () => onChange(cb.checked);
+      const txt = document.createElement("div");
+      txt.style.flex = "1";
+      txt.style.fontWeight = "700";
+      txt.textContent = label;
+      row.appendChild(cb);
+      row.appendChild(txt);
       return row;
     }
 
