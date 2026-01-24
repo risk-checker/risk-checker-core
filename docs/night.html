@@ -331,6 +331,7 @@
       recheckRound: 0,   // 0=初回,1=30分後,2=60分後
       nextIfAllNo: STATE.OBSERVE_30, // 次に進む固定フロー（全てNoのとき）
       returnAfterSleep: STATE.Q6,    // 睡眠チェック後に戻す画面（導線固定）
+      timeline: [],
     };
 
     const $view = () => document.getElementById("view");
@@ -426,6 +427,15 @@
       return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
     }
 
+    function recordTimeline(label, time) {
+      model.timeline.push({ label, time: time || nowText() });
+    }
+
+    function formatTimelineEntries() {
+      if (!model.timeline.length) return null;
+      return model.timeline.map(e => `・${e.label}: ${e.time}`).join("\n");
+    }
+
     function resetAll() {
       for (const k of Object.keys(model.answers)) model.answers[k] = null;
       for (const k of Object.keys(model.sleep)) model.sleep[k] = null;
@@ -434,6 +444,7 @@
       model.recheckRound = 0;
       model.nextIfAllNo = STATE.OBSERVE_30;
       model.returnAfterSleep = STATE.Q6;
+      model.timeline = [];
       model.state = STATE.START;
       render();
     }
@@ -531,10 +542,12 @@
 
       const r = div("row");
       r.appendChild(btn("▶ 開始（6問）", () => {
-        model.lastRunAt = nowText();
-        model.firstRunAt = model.lastRunAt; // 初回6問の基準時刻
+        const now = nowText();
+        model.lastRunAt = now;
+        model.firstRunAt = now; // 初回6問の基準時刻
         model.recheckRound = 0;
         model.nextIfAllNo = STATE.OBSERVE_30;
+        recordTimeline("初回6問実施時刻", now);
         setState(STATE.Q6);
       }, "primary big"));
       wrap.appendChild(r);
@@ -584,6 +597,20 @@
       f.appendChild(fr);
 
       wrap.appendChild(f);
+
+      const timelineCard = div("card");
+      timelineCard.appendChild(h2("観察ログ（タイムライン）"));
+      const timelineLines = formatTimelineEntries();
+      timelineCard.appendChild(div("note", timelineLines ?? "まだ記録がありません。"));
+      const tlRow = div("row");
+      const copyBtn = btn("ログをコピー", () => copyText(timelineLines || "記録がありません。"), "primary");
+      if (!timelineLines) {
+        copyBtn.disabled = true;
+        copyBtn.setAttribute("aria-disabled", "true");
+      }
+      tlRow.appendChild(copyBtn);
+      timelineCard.appendChild(tlRow);
+      wrap.appendChild(timelineCard);
 
       // Minimal footer note
       wrap.appendChild(div("note", "※ このページは“判断”をしません。Yes/Noの事実確認のみです。"));
@@ -689,9 +716,16 @@
       const confirmBtn = btn("確定する", () => {
         // Guard: should be unreachable when disabled, but keep safe
         if (Object.values(model.answers).some(v => v === null)) return;
-        if (anyYes(model.answers)) {
+        const summary = yesQuestionSummary();
+        const hasYes = anyYes(model.answers);
+        if (hasYes) {
+          recordTimeline(`結果：救急車（${summary.short}）`);
           setState(STATE.RESULT_CALL);
         } else {
+          const nextLabel = model.nextIfAllNo === STATE.OBSERVE_30 ? "再確認30分"
+            : model.nextIfAllNo === STATE.OBSERVE_60 ? "再確認60分"
+            : "引き継ぎ";
+          recordTimeline(`結果：全てNo（${nextLabel}）`);
           setState(model.nextIfAllNo);
         }
       }, "primary");
@@ -798,7 +832,8 @@
         btn(
           "6問を再チェックする",
           () => {
-            model.lastRunAt = nowText();
+            const now = nowText();
+            model.lastRunAt = now;
             for (const k of Object.keys(model.answers)) model.answers[k] = null;
 
             if (mins === 30) {
@@ -808,6 +843,8 @@
               model.recheckRound = 2;
               model.nextIfAllNo = STATE.HANDOFF;
             }
+
+            recordTimeline(`${mins}分再実施時刻`, now);
 
             setState(STATE.Q6);
           },
@@ -821,6 +858,7 @@
           "眠っているか不明 → 睡眠チェック",
           () => {
             model.returnAfterSleep = nextState || STATE.Q6;
+            recordTimeline("睡眠チェック実施時刻");
             setState(STATE.SLEEP_CHECK);
           },
           "primary"
