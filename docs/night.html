@@ -127,16 +127,99 @@
     .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; align-items:center; }
 
     button {
-      padding: 9px 14px;
-      border-radius: 8px;
+      padding: 12px 16px;
+      border-radius: 10px;
       border: 1px solid var(--btn-border);
       background: var(--btn-bg);
       color: var(--btn-fg);
       cursor: pointer;
-      font-weight: 600;
+      font-weight: 700;
+      font-size: 15px;
+      line-height: 1.2;
     }
 
     button:hover { background: var(--btn-bg-hover); }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+    button:disabled:hover { background: var(--btn-bg); }
+
+    /* Start screen: make the primary action unmistakable */
+    button.big {
+      font-size: 18px;
+      padding: 14px 18px;
+      border-radius: 12px;
+      letter-spacing: 0.3px;
+    }
+
+    @media (max-width: 600px){
+      button.big { width: 100%; }
+    }
+
+    .ans-row { gap: 12px; }
+
+    /* Answer buttons (Yes/No/不明) */
+    button.ansbtn {
+      min-width: 92px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 16px;
+    }
+
+    /* Selected state (so users can SEE their tap worked) */
+    button.ansbtn.active {
+      background: var(--btn-bg-hover);
+      border-color: var(--btn-border);
+      box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.35); /* neutral ring */
+    }
+
+    button.danger.active {
+      box-shadow: 0 0 0 3px rgba(224, 161, 161, 0.35);
+      border-color: var(--result-call-border);
+    }
+
+    button.primary.active {
+      box-shadow: 0 0 0 3px rgba(169, 195, 240, 0.35);
+      border-color: var(--result-observe-border);
+    }
+
+    @media (max-width: 600px){
+      button.ansbtn { flex: 1; min-width: 0; }
+      .ans-row { flex-wrap: nowrap; }
+    }
+
+    /* Make the state/action at the top feel primary */
+    .state-banner {
+      font-size: 16px;
+      font-weight: 800;
+      border-radius: 12px;
+      padding: 14px;
+    }
+
+    details.guide {
+      margin-top: 10px;
+    }
+
+    details.guide > summary {
+      cursor: pointer;
+      user-select: none;
+      font-weight: 700;
+    }
+
+    details.guide > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    details.guide > summary::before {
+      content: "▶ ";
+      color: var(--muted);
+    }
+
+    details.guide[open] > summary::before {
+      content: "▼ ";
+    }
 
     button.primary { border-color: var(--btn-border); }
     button.danger { border-color: var(--result-call-border); }
@@ -189,9 +272,8 @@
 
     <div class="note">
       <strong>注意：</strong>
-      このツールは<strong>診断・評価・判断をしません</strong>。<br/>
-      目的は「危険なサインを早めに拾う」ことと、「最終判断を必ず人間に返す」ことです。<br/>
-      ここで行うのは<strong>Yes/No の事実確認</strong>のみです。
+      診断・評価・判断はしません。<br/>
+      ここで行うのは <strong>Yes/Noの事実確認</strong> だけです（最終判断は人）。
     </div>
 
     <div id="view"></div>
@@ -226,7 +308,7 @@
     // 6問（仮文言。あとで確定）
     const Q6 = [
       { id: "q1", text: "反応がない／意識がおかしい（『普段』＝いつものその人の反応がない）" },
-      { id: "q2", text: "普段と比べて、息が苦しそう（話が続かない／息継ぎが増えた等）" },
+      { id: "q2", text: "いつものその人と比べて、息が苦しそう（話が続かない／息継ぎが増えた等）" },
       { id: "q3", text: "出血が止まっていない（清潔なガーゼ/ティッシュで押さえても、1分後にまだ出ている）" },
       { id: "q4", text: "本人が『耐えられない』と訴える強い痛みがある（普段より明らかに強い）" },
       { id: "q5", text: "普段（＝いつものその人は）歩けるのに、今は歩けない" },
@@ -253,6 +335,91 @@
 
     const $view = () => document.getElementById("view");
 
+    // -------------------------------------------------
+    // Theme toggle (PC only): auto / light / dark
+    // -------------------------------------------------
+    const THEME_KEY = "night-theme"; // auto | light | dark
+
+    function applyTheme(mode){
+      document.documentElement.dataset.theme = mode;
+      localStorage.setItem(THEME_KEY, mode);
+    }
+
+    function renderThemeToggle(){
+      const wrap = document.getElementById("theme-toggle");
+      if(!wrap) return;
+
+      wrap.innerHTML = "";
+
+      const label = document.createElement("span");
+      label.textContent = "表示モード：";
+      label.style.marginRight = "6px";
+      wrap.appendChild(label);
+
+      const options = [
+        { mode: "auto",  text: "自動" },
+        { mode: "light", text: "ライト" },
+        { mode: "dark",  text: "ダーク" },
+      ];
+
+      const saved = localStorage.getItem(THEME_KEY) || "auto";
+
+      options.forEach(({mode, text})=>{
+        const b = document.createElement("button");
+        b.type = "button";
+        b.textContent = text;
+        b.setAttribute("aria-label", `表示モード: ${text}`);
+        if (mode === saved) b.classList.add("active");
+        b.onclick = ()=>{
+          applyTheme(mode);
+          renderThemeToggle();
+        };
+        wrap.appendChild(b);
+      });
+    }
+
+    function initTheme(){
+      const saved = localStorage.getItem(THEME_KEY) || "auto";
+      document.documentElement.dataset.theme = saved;
+    }
+
+    // ================================
+    // Facility info (local only)
+    // ================================
+    const FACILITY_KEY = "night-facility";
+
+    const facility = {
+      name: "",
+      address: "",
+      phone: "",
+    };
+
+    function loadFacility() {
+      try {
+        const raw = localStorage.getItem(FACILITY_KEY);
+        if (!raw) return;
+        const obj = JSON.parse(raw);
+        facility.name = obj.name || "";
+        facility.address = obj.address || "";
+        facility.phone = obj.phone || "";
+      } catch (e) {}
+    }
+
+    function saveFacility() {
+      localStorage.setItem(FACILITY_KEY, JSON.stringify(facility));
+    }
+
+    function clearFacility() {
+      localStorage.removeItem(FACILITY_KEY);
+      facility.name = "";
+      facility.address = "";
+      facility.phone = "";
+    }
+
+    function facilityValue(v) {
+      return v && v.trim() ? v : "＿＿＿＿";
+    }
+
     function nowText() {
       const d = new Date();
       const pad = (n) => String(n).padStart(2, "0");
@@ -277,6 +444,36 @@
 
     function allYes(obj) {
       return Object.values(obj).every(v => v === true);
+    }
+
+    function yesQuestionSummary() {
+      const yesIdx = [];
+      const yesLines = [];
+      Q6.forEach((q, i) => {
+        if (model.answers[q.id] === true) {
+          const n = i + 1;
+          yesIdx.push(`Q${n}`);
+          yesLines.push(`Q${n}: ${q.text}`);
+        }
+      });
+      return {
+        short: yesIdx.length ? yesIdx.join(", ") : "（なし）",
+        lines: yesLines.join("\n"),
+      };
+    }
+
+    function copyText(text){
+      try {
+        navigator.clipboard.writeText(text);
+      } catch (e) {
+        // Fallback: create a temporary textarea
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
     }
 
     function setState(next) {
@@ -324,28 +521,73 @@
 
     function screenStart() {
       const wrap = div("card");
-      wrap.appendChild(h2("起動（迷ったら起動）"));
-      wrap.appendChild(p(
-        "以下のいずれかが起きたら開始します：\n" +
-        "・本人が体調不良/痛み/違和感を訴えた\n" +
-        "・夜勤が『普段と違う可能性』を感じた\n" +
-        "・転倒/衝突/出血など出来事があった\n" +
-        "・第三者から異変の報告があった\n" +
-        "・『普段』が分からない場合も起動してよい（不明なら安全側→Yes）\n" +
-        "・外部（訪問診療/訪問看護）へ連絡してもよいが、このアプリの判定は上書きしない（相談は『情報共有』扱い）"
+
+      // 1 screen = 1 action
+      wrap.appendChild(h2("起動（迷ったら開始）"));
+      wrap.appendChild(div(
+        "muted",
+        "今やること：6問（Yes/No）を開始する。迷ったら開始してOK。"
       ));
 
       const r = div("row");
-      r.appendChild(btn("開始（6問へ）", () => {
+      r.appendChild(btn("▶ 開始（6問）", () => {
         model.lastRunAt = nowText();
         model.firstRunAt = model.lastRunAt; // 初回6問の基準時刻
         model.recheckRound = 0;
         model.nextIfAllNo = STATE.OBSERVE_30;
         setState(STATE.Q6);
-      }, "primary"));
-
+      }, "primary big"));
       wrap.appendChild(r);
+
+      // Details are available, but not required to proceed
+      const details = document.createElement("details");
+      details.className = "guide";
+
+      const summary = document.createElement("summary");
+      summary.textContent = "詳細（起動条件 / 外部連絡 / 注意）";
+      details.appendChild(summary);
+
+      details.appendChild(div(
+        "note",
+        "起動条件（迷ったら起動）：\n" +
+          "・本人の訴え / 夜勤の違和感 / 転倒・出血など出来事 / 第三者報告\n" +
+          "・『普段』が分からない → 不明なら安全側（Yes）\n\n" +
+          "外部連絡：\n" +
+          "・外部（訪問診療/訪問看護）へ連絡してよい（情報共有）\n" +
+          "・ただし、このアプリの表示（救急車/再確認）は上書きしない\n\n" +
+          "注意：\n" +
+          "・このツールは診断・評価・判断をしない（Yes/Noの事実確認のみ）"
+      ));
+
+      wrap.appendChild(details);
+      
+      // ---- Facility settings (local only) ----
+      const f = document.createElement("details");
+      f.className = "guide";
+
+      const fs = document.createElement("summary");
+      fs.textContent = "施設情報（この端末に保存）";
+      f.appendChild(fs);
+
+      f.appendChild(div(
+        "note",
+        "※ この情報はGitHubには保存されません。\n※ この端末のブラウザだけが覚えます。"
+      ));
+
+      f.appendChild(inputText("施設名", facility.name, v => facility.name = v));
+      f.appendChild(inputText("住所", facility.address, v => facility.address = v));
+      f.appendChild(inputText("電話", facility.phone, v => facility.phone = v));
+
+      const fr = div("row");
+      fr.appendChild(btn("保存", () => { saveFacility(); render(); }, "primary"));
+      fr.appendChild(btn("消去", () => { clearFacility(); render(); }, "danger"));
+      f.appendChild(fr);
+
+      wrap.appendChild(f);
+
+      // Minimal footer note
       wrap.appendChild(div("note", "※ このページは“判断”をしません。Yes/Noの事実確認のみです。"));
+
       return wrap;
     }
 
@@ -362,13 +604,25 @@
       const head = div("card");
       head.appendChild(h2(`6問（今この瞬間の事実のみ）${model.recheckRound===0?"（初回）":model.recheckRound===1?"（30分後の再実施）":"（60分後の再実施）"}`));
       head.appendChild(div("muted", `最終実行: ${model.lastRunAt ?? "未実行"}`));
-      head.appendChild(div("note",
-        "ルール：Q1〜Q6のどれか1つでも Yes → 『救急車（119）』。\n" +
-        "全て No → 『経過観察（30分→60分）』。\n" +
-        "※ 推測・原因・評価は禁止。\n" +
-        "※ 本アプリの『普段』は“正常/理想”ではなく『いつものその人』の比較軸を指す。\n" +
-        "※ 『普段』が分からない/確認できない場合：迷ったら Yes（安全側）に倒す（記録・引継ぎで後から確認する）。"
+      // Night-shift first: show the next action first, keep rules in details
+      const banner = div("result observe state-banner",
+        "いまやること：6問に Yes/No を入れる → 『確定する』\n" +
+        "（推測・原因・評価はしない。迷ったら不明→安全側）"
+      );
+      head.appendChild(banner);
+
+      const details = document.createElement("details");
+      details.className = "guide";
+      const summary = document.createElement("summary");
+      summary.textContent = "ルール / 補足";
+      details.appendChild(summary);
+      details.appendChild(div(
+        "note",
+        "ルール：1つでもYes→救急車（119） / 全てNo→再確認（30→60）。\n" +
+          "※推測・原因・評価は禁止。\n" +
+          "※『普段』＝いつものその人（正常/理想ではない）。不明なら安全側（Yes）。"
       ));
+      head.appendChild(details);
       wrap.appendChild(head);
 
       // Recheck pre-check (30/60分後の再実施では、まず睡眠/起床状態を確認する導線を上に出す)
@@ -377,8 +631,8 @@
         pre.appendChild(h2("再確認の前に：起こして確認できる状態か？"));
         pre.appendChild(div(
           "note",
-          "30分後/60分後の再確認では、まず『起こして6問を実施できる状態か』を確認します。\n" +
-          "睡眠か不明な場合は、先に睡眠チェックへ進みます（救急車の判定はしない）。"
+          "再確認（30/60分後）の前に：起こして6問できる状態か確認。\n" +
+          "睡眠か不明なら先に睡眠チェック（救急車判定はしない）。"
         ));
         const rr = div("row");
         rr.appendChild(btn("睡眠か不明 → 睡眠チェックへ", () => {
@@ -399,10 +653,21 @@
         title.textContent = `Q${i+1}. ${q.text}`;
         card.appendChild(title);
 
-        const r = div("row");
-        r.appendChild(btn("Yes", () => { model.answers[q.id] = true; render(); }, "danger"));
-        r.appendChild(btn("No", () => { model.answers[q.id] = false; render(); }));
-        r.appendChild(spanPill(model.answers[q.id]));
+        const r = div("row ans-row");
+
+        const bYes = btn("はい", () => { model.answers[q.id] = true; render(); }, "danger ansbtn");
+        const bNo  = btn("いいえ", () => { model.answers[q.id] = false; render(); }, "ansbtn");
+        const bNil = btn("未回答", () => { model.answers[q.id] = null; render(); }, "ansbtn");
+
+        // Visual feedback (selected state)
+        if (model.answers[q.id] === true) bYes.classList.add("active");
+        if (model.answers[q.id] === false) bNo.classList.add("active");
+        if (model.answers[q.id] === null) bNil.classList.add("active");
+
+        r.appendChild(bYes);
+        r.appendChild(bNo);
+        r.appendChild(bNil);
+
         card.appendChild(r);
 
         wrap.appendChild(card);
@@ -420,15 +685,24 @@
       foot.appendChild(info);
 
       const r = div("row");
-      r.appendChild(btn("確定する", () => {
+
+      const confirmBtn = btn("確定する", () => {
+        // Guard: should be unreachable when disabled, but keep safe
         if (Object.values(model.answers).some(v => v === null)) return;
         if (anyYes(model.answers)) {
           setState(STATE.RESULT_CALL);
         } else {
           setState(model.nextIfAllNo);
         }
-      }, "primary"));
+      }, "primary");
 
+      // A) 未回答は許すが、確定（行動決定）は許さない
+      if (undecided) {
+        confirmBtn.disabled = true;
+        confirmBtn.setAttribute("aria-disabled", "true");
+      }
+
+      r.appendChild(confirmBtn);
 
       r.appendChild(btn("最初からやり直す", () => resetAll()));
       foot.appendChild(r);
@@ -440,23 +714,55 @@
     function screenCall() {
       const wrap = document.createElement("div");
       const card = div("card");
+
+      const summary = yesQuestionSummary();
+
       card.appendChild(h2("表示：救急車（119）"));
-      card.appendChild(div("result call",
-        "✅ 条件一致：6問のうち1つ以上が Yes。\n" +
-        "行動：119へ通報。\n" +
-        "注意：搬送先の判断は救急隊へ。ここは判断しない。"
-      ));
-      card.appendChild(div("note",
-        "伝える内容（例）\n" +
-        "・施設名 / 住所\n" +
-        "・年齢・性別（分かる範囲）\n" +
-        "・Yesになった事実（Q番号）\n" +
-        "※ 推測・原因・結論は言わない\n" +
-        "\n" +
-        "外部（本人契約の訪問診療／外部訪問看護）への連絡について\n" +
-        "・連絡してよい：状態通知（情報共有）\n" +
-        "・してはいけない：判定の相談・上書き\n" +
-        "（※『救急車を呼ぶ/呼ばない』は本アプリの条件一致で固定）"
+
+      // Primary, big, unmissable state/action
+      const primary = div(
+        "result call state-banner",
+        "✅ 行動：119（救急車）\n" +
+          "条件一致：Yesあり（" + summary.short + "）"
+      );
+      card.appendChild(primary);
+
+      // Show exactly which questions were Yes
+      const yesBox = div(
+        "note",
+        "Yesになった問診（救急隊へ伝える用）：\n" +
+          (summary.lines ? summary.lines : "（なし）")
+      );
+      card.appendChild(yesBox);
+
+      // Minimal script for the call (copyable)
+      const callText = [
+        "【救急要請（119）】",
+        `こちらは ${facilityValue(facility.name)} です。`,
+        `住所は ${facilityValue(facility.address)} です。`,
+        facilityValue(facility.phone) !== "＿＿＿＿" ? `折り返し電話は ${facilityValue(facility.phone)} です。` : "折り返し電話は（未入力）です。",
+        "利用者：＿＿歳、＿＿性。",
+        `『6問』で Yes になったのは ${summary.short} です。`,
+        "（内容を読み上げます）",
+        summary.lines ? summary.lines : "（Yesの詳細はなし）",
+        "※原因の推測や評価は言いません。"
+      ].join("\n");
+
+      const copyWrap = div("card");
+      copyWrap.appendChild(h2("救急隊へ伝える（読み上げ/コピペ用）"));
+      copyWrap.appendChild(div("muted", "空欄は口頭で補ってOK。『Yesになった問診』だけ伝える。"));
+      copyWrap.appendChild(div("result", callText));
+
+      const cr = div("row");
+      cr.appendChild(btn("コピーする", () => copyText(callText), "primary"));
+      copyWrap.appendChild(cr);
+      card.appendChild(copyWrap);
+
+      // External contact rule (kept short)
+      card.appendChild(div(
+        "note",
+        "外部（訪問診療/訪問看護）は『状態通知』のみ。判定の相談・上書きはしない。\n" +
+          "※搬送先は救急隊。"
       ));
 
       const r = div("row");
@@ -470,53 +776,108 @@
 
     function screenObserve(mins, nextState) {
       const card = div("card");
-      card.appendChild(h2(`表示：経過観察（初回6問から${mins}分で再実施）`));
-      card.appendChild(div("result observe",
-        "✅ 条件一致：6問がすべて No。\n" +
-        "行動：固定の経過観察へ。\n" +
-        "※ 30分/60分は『初回に6問を実施した時刻』からの経過時間。\n" +
-        `　初回6問：${model.firstRunAt ?? "未記録"}` + "\n" +
-        "※ タイマーは実装しない（現場の時計でOK）。"
-      ));
 
+      // 言葉の置き換え："経過観察" → "様子を見る（再チェック待ち）"
+      const stateTitle = `状態：様子を見る（再チェック待ち ${mins}分）`;
+      card.appendChild(h2(stateTitle));
+
+      // まず「次に何をするか」を最大優先で表示
+      const base = model.firstRunAt ?? "未記録";
+      const banner = div(
+        "result observe state-banner",
+        `次にすること：${mins}分たったら『6問を再チェック』\n` +
+          `（基準：初回6問 ${base} からの経過）`
+      );
+      card.appendChild(banner);
+
+      // ボタンは迷いを増やさない：主ボタン + 補助ボタンの2つ
       const r = div("row");
-      r.appendChild(btn(`初回から${mins}分経過したら：6問を再実施する`, () => {
-        // 再実施は必ず6問へ戻す（UIを自然に誘導する）
-        model.lastRunAt = nowText();
-        for (const k of Object.keys(model.answers)) model.answers[k] = null;
 
-        if (mins === 30) {
-          model.recheckRound = 1;
-          model.nextIfAllNo = STATE.OBSERVE_60;
-        } else {
-          model.recheckRound = 2;
-          model.nextIfAllNo = STATE.HANDOFF;
-        }
+      // 主：再チェック（6問へ）
+      r.appendChild(
+        btn(
+          "6問を再チェックする",
+          () => {
+            model.lastRunAt = nowText();
+            for (const k of Object.keys(model.answers)) model.answers[k] = null;
 
-        setState(STATE.Q6);
-      }, "primary"));
+            if (mins === 30) {
+              model.recheckRound = 1;
+              model.nextIfAllNo = STATE.OBSERVE_60;
+            } else {
+              model.recheckRound = 2;
+              model.nextIfAllNo = STATE.HANDOFF;
+            }
 
-      r.appendChild(btn("いま悪化/新規事象（最初から6問）", () => {
-        model.lastRunAt = nowText();
-        // 回答は残しても良いが、原則は再起動なので一旦回答クリア
-        for (const k of Object.keys(model.answers)) model.answers[k] = null;
-        setState(STATE.Q6);
-      }, "danger"));
+            setState(STATE.Q6);
+          },
+          "primary big"
+        )
+      );
 
-      r.appendChild(btn("寝ている可能性がある（未確定）→睡眠チェックへ", () => {
-        model.returnAfterSleep = nextState;
-        setState(STATE.SLEEP_CHECK);
-      }));
+      // 補助：睡眠か不明
+      r.appendChild(
+        btn(
+          "眠っているか不明 → 睡眠チェック",
+          () => {
+            model.returnAfterSleep = nextState || STATE.Q6;
+            setState(STATE.SLEEP_CHECK);
+          },
+          "primary"
+        )
+      );
 
-      r.appendChild(btn("最初からやり直す", () => resetAll()));
       card.appendChild(r);
 
-      card.appendChild(div("note",
-        "補足：経過観察中の連絡・相談は“してもよい”。ただしこの画面の判定を上書きしない。\n" +
-        "・本人が『外部に相談したい』と明確に希望した場合：電話を渡す/事実を伝えるのは可（情報共有）。\n" +
-        "・それ以外：原則として外部への電話は不要。\n" +
-        "（判断を誰かに渡して揺らすのを防ぐため）"
-      ));
+      // 補足は折りたたみに退避（読みたくない人の邪魔をしない）
+      const details = document.createElement("details");
+      details.className = "guide";
+
+      const summary = document.createElement("summary");
+      summary.textContent = "補足（定義 / 連絡ルール）";
+      details.appendChild(summary);
+
+      details.appendChild(
+        div(
+          "note",
+          "『様子を見る（再チェック待ち）』＝いまは原因探しをせず、時間をおいて同じ6問で事実だけをもう一度確認すること。\n" +
+            `・${mins}分は『初回6問を実施した時刻』からの経過。\n` +
+            "・タイマーは実装しない（現場の時計でOK）。\n\n" +
+            "外部連絡：\n" +
+            "・外部（訪問診療/訪問看護）へ連絡してよい（情報共有）。\n" +
+            "・ただし、この画面の流れ（再チェック/119）は上書きしない。\n" +
+            "・本人が『相談したい』と明確に希望した場合のみ、電話を渡す/事実を伝えるのは可。"
+        )
+      );
+
+      // 例外操作は折りたたみの中へ
+      const more = div("row");
+      more.appendChild(
+        btn(
+          "いま悪化/新規事象（最初から6問）",
+          () => {
+            model.lastRunAt = nowText();
+            for (const k of Object.keys(model.answers)) model.answers[k] = null;
+            model.recheckRound = 0;
+            model.firstRunAt = model.lastRunAt; // 新規事象なので基準を更新
+            model.nextIfAllNo = STATE.OBSERVE_30;
+            setState(STATE.Q6);
+          },
+          "danger"
+        )
+      );
+      more.appendChild(btn("最初からやり直す", () => resetAll()));
+      details.appendChild(more);
+
+      card.appendChild(details);
+
+      // ログは最小サイズで下に
+      card.appendChild(
+        div(
+          "small",
+          `初回：${model.firstRunAt ?? "未記録"} / 最終：${model.lastRunAt ?? "未実行"}`
+        )
+      );
 
       return card;
     }
@@ -526,10 +887,8 @@
       const card = div("card");
       card.appendChild(h2("睡眠チェック（睡眠か不明のときの補助）"));
       card.appendChild(div("note",
-        "ここで決めるのは『起こして6問を実施する』か『起こさず観察を続ける』のみ。\n" +
-        "救急車の判定はしない。\n" +
-        "不明が1つでもあれば『起こして6問へ戻す』に倒す。\n" +
-        "（表示とボタンが矛盾しないよう、結果に応じて出るボタンを自動で絞ります）"
+        "ここで決めるのは『起こして6問』か『起こさず観察』のみ（救急車判定はしない）。\n" +
+        "不明が残るなら『起こして6問』に倒す。"
       ));
       wrap.appendChild(card);
 
@@ -540,11 +899,21 @@
         title.textContent = `S${i+1}. ${q.text}`;
         c.appendChild(title);
 
-        const r = div("row");
-        r.appendChild(btn("Yes", () => { model.sleep[q.id] = true; render(); }, "primary"));
-        r.appendChild(btn("No", () => { model.sleep[q.id] = false; render(); }, "danger"));
-        r.appendChild(btn("不明", () => { model.sleep[q.id] = null; render(); }));
-        r.appendChild(spanPill(model.sleep[q.id]));
+        const r = div("row ans-row");
+
+        const bYes = btn("はい", () => { model.sleep[q.id] = true; render(); }, "primary ansbtn");
+        const bNo  = btn("いいえ", () => { model.sleep[q.id] = false; render(); }, "danger ansbtn");
+        const bUnk = btn("不明", () => { model.sleep[q.id] = null; render(); }, "ansbtn");
+
+        // Visual feedback (selected state)
+        if (model.sleep[q.id] === true) bYes.classList.add("active");
+        if (model.sleep[q.id] === false) bNo.classList.add("active");
+        if (model.sleep[q.id] === null) bUnk.classList.add("active");
+
+        r.appendChild(bYes);
+        r.appendChild(bNo);
+        r.appendChild(bUnk);
+
         c.appendChild(r);
 
         wrap.appendChild(c);
@@ -671,7 +1040,8 @@
 
     function btn(label, onClick, extraClass) {
       const b = document.createElement("button");
-      if (extraClass) b.className = extraClass;
+      b.type = "button"; // prevent any accidental form-submit behavior
+      if (extraClass) b.className = String(extraClass);
       b.textContent = label;
       b.onclick = onClick;
       return b;
@@ -686,54 +1056,33 @@
       return s;
     }
 
+    // Helper: labeled text input (row layout)
+    function inputText(label, value, onChange) {
+      const row = div("row");
+
+      const l = document.createElement("div");
+      l.className = "muted";
+      l.style.minWidth = "80px";
+      l.textContent = label;
+
+      const i = document.createElement("input");
+      i.type = "text";
+      i.value = value || "";
+      i.style.flex = "1";
+      i.style.padding = "12px";
+      i.oninput = () => onChange(i.value);
+
+      row.appendChild(l);
+      row.appendChild(i);
+      return row;
+    }
+
     // boot
-    render();
-
-    // -------------------------------------------------
-    // Theme toggle (PC only): auto / light / dark
-    // -------------------------------------------------
-    const THEME_KEY = "night-theme"; // auto | light | dark
-
-    function applyTheme(mode){
-      document.documentElement.dataset.theme = mode;
-      localStorage.setItem(THEME_KEY, mode);
-    }
-
-    function renderThemeToggle(){
-      const wrap = document.getElementById("theme-toggle");
-      if(!wrap) return;
-
-      // Clear
-      wrap.innerHTML = "";
-
-      const label = document.createElement("span");
-      label.textContent = "表示モード：";
-      label.style.marginRight = "6px";
-      wrap.appendChild(label);
-
-      const options = [
-        { mode: "auto",  text: "自動" },
-        { mode: "light", text: "ライト" },
-        { mode: "dark",  text: "ダーク" },
-      ];
-
-      options.forEach(({mode, text})=>{
-        const b = document.createElement("button");
-        b.type = "button";
-        b.textContent = text;
-        b.setAttribute("aria-label", `表示モード: ${text}`);
-        b.onclick = ()=>applyTheme(mode);
-        wrap.appendChild(b);
-      });
-    }
-
-    function initTheme(){
-      const saved = localStorage.getItem(THEME_KEY) || "auto";
-      document.documentElement.dataset.theme = saved;
-    }
-
     initTheme();
+    loadFacility();
+    render();
     renderThemeToggle();
+
   </script>
 </body>
 </html>
