@@ -202,6 +202,35 @@
       margin-top: 10px;
     }
 
+    /* Family contact template (theme-aware: no white panel in dark mode) */
+    details.family-template {
+      background: var(--note-bg);
+      border-radius: 10px;
+      border: 1px solid var(--card-border);
+      padding: 12px;
+      margin-top: 12px;
+      color: var(--fg);
+    }
+
+    .family-template .panel {
+      margin-top: 8px;
+      background: var(--box-bg);
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .family-template .copybox {
+      font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
+      white-space: pre-wrap;
+      margin: 0 0 10px;
+      padding: 10px;
+      border-radius: 8px;
+      background: var(--box-bg);
+      border: 1px solid var(--border);
+      color: var(--fg);
+    }
+
     details.guide > summary {
       cursor: pointer;
       user-select: none;
@@ -280,6 +309,8 @@
     .toast.hidden { display: none; }
 
     a { color: inherit; }
+    details.family-template summary { color: var(--fg); }
+    details.family-template .muted { color: var(--muted); }
   </style>
 </head>
 
@@ -537,6 +568,10 @@
       const tl = formatTimelineEntries();
       t.push("【時刻ログ】");
       t.push(tl ? tl : "（記録なし）");
+      t.push("");
+
+      t.push("【家族連絡】");
+      t.push("・病状説明やご連絡は、必要と判断された場合に病院（医師）から行われます。");
       t.push("");
 
       const meds = Object.entries(model.medicationEvents)
@@ -967,17 +1002,18 @@
         "※原因の推測や評価は言いません。"
       ].join("\n");
 
-      const callDetails = document.createElement("details");
-      callDetails.className = "guide";
+  const callDetails = document.createElement("details");
+  callDetails.className = "guide";
+  callDetails.setAttribute("open", "");
       const callSummary = document.createElement("summary");
       callSummary.textContent = "救急隊へ伝える（読み上げ/コピペ用）";
-      callDetails.appendChild(callSummary);
-      callDetails.appendChild(div("muted", "空欄は口頭で補ってOK。『Yesになった問診』だけ伝える。"));
-      callDetails.appendChild(div("result", callText));
-      const cr = div("row");
-      cr.appendChild(btn("コピーする", () => { copyText(callText); toast("コピーしました"); }, "primary"));
-      callDetails.appendChild(cr);
-      card.appendChild(callDetails);
+  callDetails.appendChild(callSummary);
+  callDetails.appendChild(div("muted", "空欄は口頭で補ってOK。『Yesになった問診』だけ伝える。"));
+  callDetails.appendChild(div("result", callText));
+  const cr = div("row");
+  cr.appendChild(btn("コピーする", () => { copyText(callText); toast("コピーしました"); }, "primary"));
+  callDetails.appendChild(cr);
+  card.appendChild(callDetails);
 
       // External contact rule (kept short)
       const external = document.createElement("details");
@@ -998,6 +1034,36 @@
       card.appendChild(r);
 
       wrap.appendChild(card);
+      /*
+      この表示は「判断」ではなく「期待値調整」のための定型文。
+      施設は家族の来院要否・病状評価・連絡要否を判断しない。
+      判断主体は常に医師。
+      */
+  const familyDetails = document.createElement("details");
+  familyDetails.className = "family-template guide";
+      const familySummary = document.createElement("summary");
+      familySummary.textContent = "家族へ伝える（搬送先が決まった後／事実のみ）";
+      familyDetails.appendChild(familySummary);
+
+      const familyPanel = document.createElement("div");
+      familyPanel.className = "panel";
+      const familyNote = document.createElement("p");
+      familyNote.className = "muted";
+      familyNote.textContent = "※この文面は「行動要求」をしません。説明は原則、病院（医師）からです。";
+      familyPanel.appendChild(familyNote);
+
+      const familyCopy = document.createElement("pre");
+      familyCopy.className = "copybox";
+      familyCopy.textContent = "【家族への連絡（事実通知）】\n（施設）＿＿＿＿です。\n（利用者）＿＿＿＿さんが、救急搬送になりました。\n搬送先：＿＿＿＿病院（※搬送先が確定してから記入）\n※現在の状況の説明は、病院（医師）から行われます。";
+      familyPanel.appendChild(familyCopy);
+
+      const familyBtnRow = div("row");
+      const copyFamily = btn("コピーする", () => { copyText(familyCopy.textContent); toast("コピーしました"); }, "primary");
+      familyBtnRow.appendChild(copyFamily);
+      familyPanel.appendChild(familyBtnRow);
+
+      familyDetails.appendChild(familyPanel);
+      wrap.appendChild(familyDetails);
       appendRecordLogCard(wrap, "（救急車表示）");
       return wrap;
     }
