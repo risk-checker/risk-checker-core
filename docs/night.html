@@ -308,7 +308,7 @@
     // 6問（仮文言。あとで確定）
     const Q6 = [
       { id: "q1", text: "反応がない／意識がおかしい（『普段』＝いつものその人の反応がない）" },
-      { id: "q2", text: "いつものその人と比べて、息が苦しそう（話が続かない／息継ぎが増えた等）" },
+  { id: "q2", text: "呼吸について、いつものその人と比べて\n　はっきり『問題ない』と言えない\n（比べられない・分からない場合も『はい』）" },
       { id: "q3", text: "出血が止まっていない（清潔なガーゼ/ティッシュで押さえても、1分後にまだ出ている）" },
       { id: "q4", text: "本人が『耐えられない』と訴える強い痛みがある（普段より明らかに強い）" },
       { id: "q5", text: "普段（＝いつものその人は）歩けるのに、今は歩けない" },
@@ -770,6 +770,7 @@
       card.appendChild(yesBox);
 
       // Minimal script for the call (copyable)
+      const now = nowText();
       const callText = [
         "【救急要請（119）】",
         `こちらは ${facilityValue(facility.name)} です。`,
@@ -777,6 +778,7 @@
         facilityValue(facility.phone) !== "＿＿＿＿" ? `折り返し電話は ${facilityValue(facility.phone)} です。` : "折り返し電話は（未入力）です。",
         "利用者：＿＿歳、＿＿性。",
         `『6問』で Yes になったのは ${summary.short} です。`,
+        `判定時刻：${now}`,
         "（内容を読み上げます）",
         summary.lines ? summary.lines : "（Yesの詳細はなし）",
         "※原因の推測や評価は言いません。"
