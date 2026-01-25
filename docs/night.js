@@ -86,6 +86,7 @@ function renderFontToggle(){
 // Theme toggle (PC only): auto / light / dark
 // -------------------------------------------------
 const THEME_KEY = "night-theme"; // auto | light | dark
+const FONT_KEY = "night-font"; // md | lg
 
 function applyTheme(mode){
   document.documentElement.dataset.theme = mode;
@@ -124,15 +125,45 @@ function renderThemeToggle(){
     wrap.appendChild(b);
   });
 
- 
+  // Font size toggle
+  const fsLabel = document.createElement("span");
+  fsLabel.textContent = "　文字サイズ：";
+  fsLabel.style.marginLeft = "8px";
+  fsLabel.style.marginRight = "6px";
+  wrap.appendChild(fsLabel);
+
+  const fontOptions = [
+    { mode: "md", text: "標準" },
+    { mode: "lg", text: "大きい文字" },
+  ];
+  const savedFont = localStorage.getItem(FONT_KEY) || "md";
+  fontOptions.forEach(({mode, text})=>{
+    const fb = document.createElement("button");
+    fb.type = "button";
+    fb.textContent = text;
+    fb.setAttribute("aria-label", `文字サイズ: ${text}`);
+    if (mode === savedFont) fb.classList.add("active");
+    fb.onclick = ()=>{
+      applyFontSize(mode);
+      renderThemeToggle();
+    };
+    wrap.appendChild(fb);
+  });
 }
 
 function initTheme(){
   const saved = localStorage.getItem(THEME_KEY) || "auto";
   document.documentElement.dataset.theme = saved;
+  const savedFont = localStorage.getItem(FONT_KEY) || "md";
+  document.documentElement.dataset.font = savedFont;
 }
 
-
+function applyFontSize(mode){
+  // mode: "md" | "lg"
+  if (!mode) mode = "md";
+  document.documentElement.dataset.font = mode;
+  localStorage.setItem(FONT_KEY, mode);
+}
 
 // ================================
 // Facility info (local only)
@@ -1084,3 +1115,18 @@ loadFacility();
 render();
 renderThemeToggle();
 renderFontToggle();
+
+// Expose a small debug API so users can trigger re-renders from DevTools.
+// Modules do not expose functions to window by default; this helps troubleshooting.
+try {
+  if (typeof window !== 'undefined') {
+    window.__night = window.__night || {};
+    window.__night.renderThemeToggle = renderThemeToggle;
+    window.__night.renderFontToggle = renderFontToggle;
+    window.__night.applyFont = applyFont;
+    window.__night.applyTheme = applyTheme;
+    window.__night.render = render;
+  }
+} catch (e) {
+  // ignore in non-browser environments
+}
