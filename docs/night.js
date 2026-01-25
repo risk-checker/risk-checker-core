@@ -1108,25 +1108,38 @@ function checkboxRow(label, checked, onChange) {
   return row;
 }
 
-// boot
-initTheme();
-initFont();
-loadFacility();
-render();
-renderThemeToggle();
-renderFontToggle();
+// boot: initialize UI after DOM is ready in a predictable order
+function bootNight() {
+  try {
+    initTheme();
+    renderThemeToggle();
+    initFont();
+    renderFontToggle();
+    loadFacility();
+    render();
+  } catch (e) {
+    // swallow — in production we might log
+    console.error('bootNight error', e);
+  }
+}
+
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootNight);
+  } else {
+    // already ready
+    setTimeout(bootNight, 0);
+  }
+}
 
 // Expose a small debug API so users can trigger re-renders from DevTools.
-// Modules do not expose functions to window by default; this helps troubleshooting.
-try {
-  if (typeof window !== 'undefined') {
-    window.__night = window.__night || {};
-    window.__night.renderThemeToggle = renderThemeToggle;
-    window.__night.renderFontToggle = renderFontToggle;
-    window.__night.applyFont = applyFont;
-    window.__night.applyTheme = applyTheme;
-    window.__night.render = render;
-  }
-} catch (e) {
-  // ignore in non-browser environments
+if (typeof window !== 'undefined') {
+  window.__night = window.__night || {};
+  Object.assign(window.__night, {
+    render,
+    renderThemeToggle,
+    renderFontToggle,
+    applyTheme,
+    applyFont,
+  });
 }
