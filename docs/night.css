@@ -328,3 +328,53 @@ button.danger { border-color: var(--result-call-border); }
 a { color: inherit; }
 details.family-template summary { color: var(--fg); }
 details.family-template .muted { color: var(--muted); }
+/* =========================
+   Accessibility: 70s / Night shift
+   ========================= */
+
+/* Default: slightly larger than usual */
+:root {
+  --base-font: 18px;
+  --base-line: 1.75;
+  --btn-font: 18px;
+  --btn-pad-y: 16px;
+  --btn-pad-x: 18px;
+  --tap-min-h: 52px; /* 44px以上 + 余裕 */
+}
+
+/* Big mode (one-tap) */
+html[data-font="lg"] {
+  --base-font: 20px;
+  --btn-font: 20px;
+  --btn-pad-y: 18px;
+  --tap-min-h: 56px;
+}
+
+body {
+  font-size: var(--base-font);
+  line-height: var(--base-line);
+}
+
+/* Make buttons easy to hit */
+button {
+  font-size: var(--btn-font);
+  padding: var(--btn-pad-y) var(--btn-pad-x);
+  min-height: var(--tap-min-h);
+}
+
+/* Start screen big buttons even bigger */
+button.big {
+  font-size: calc(var(--btn-font) + 2px);
+  min-height: calc(var(--tap-min-h) + 6px);
+}
+
+/* Improve readability of small text */
+.muted, .small {
+  font-size: 0.95em; /* 18px基準なら十分読める */
+}
+
+/* Clear focus ring (keyboard/accidental) */
+button:focus-visible {
+  outline: 3px solid rgba(120, 170, 255, 0.7);
+  outline-offset: 2px;
+}

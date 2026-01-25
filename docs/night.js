@@ -18,6 +18,70 @@ const model = {
 
 const $view = () => document.getElementById("view");
 
+// Ensure mount points exist (so UI doesn't disappear even if night.html is edited)
+function ensureMount(id, afterId) {
+  if (document.getElementById(id)) return;
+  const after = document.getElementById(afterId);
+  if (!after) return;
+  const div = document.createElement("div");
+  div.id = id;
+  div.style.display = "inline-flex";
+  div.style.gap = "6px";
+  div.style.flexWrap = "wrap";
+  div.style.alignItems = "center";
+  div.style.marginLeft = "10px";
+  after.insertAdjacentElement("afterend", div);
+}
+// -------------------------------------------------
+// Font size toggle: normal / large (for 70s)
+// -------------------------------------------------
+const FONT_KEY = "night-font"; // normal | lg
+
+function applyFont(mode){
+  document.documentElement.dataset.font = mode; // "normal" or "lg"
+  localStorage.setItem(FONT_KEY, mode);
+}
+
+function initFont(){
+  const saved = localStorage.getItem(FONT_KEY) || "lg"; // ★デフォルトは大
+  document.documentElement.dataset.font = saved;
+}
+
+function renderFontToggle(){
+  const wrap = document.getElementById("font-toggle");
+  if (!wrap) {
+    // If night.html doesn't have #font-toggle, create it next to #theme-toggle
+    ensureMount("font-toggle", "theme-toggle");
+  }
+  const mount = document.getElementById("font-toggle");
+  if(!mount) return;
+
+  mount.innerHTML = "";
+
+  const label = document.createElement("span");
+  label.textContent = "文字：";
+  label.style.marginRight = "6px";
+  mount.appendChild(label);
+
+  const options = [
+    { mode: "normal", text: "標準" },
+    { mode: "lg",     text: "大" },
+  ];
+
+  const saved = localStorage.getItem(FONT_KEY) || "lg";
+
+  options.forEach(({mode, text})=>{
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = text;
+    if (mode === saved) b.classList.add("active");
+    b.onclick = ()=>{
+      applyFont(mode);
+      renderFontToggle();
+    };
+    mount.appendChild(b);
+  });
+}
 // -------------------------------------------------
 // Theme toggle (PC only): auto / light / dark
 // -------------------------------------------------
@@ -59,12 +123,16 @@ function renderThemeToggle(){
     };
     wrap.appendChild(b);
   });
+
+ 
 }
 
 function initTheme(){
   const saved = localStorage.getItem(THEME_KEY) || "auto";
   document.documentElement.dataset.theme = saved;
 }
+
+
 
 // ================================
 // Facility info (local only)
@@ -1011,6 +1079,8 @@ function checkboxRow(label, checked, onChange) {
 
 // boot
 initTheme();
+initFont();
 loadFacility();
 render();
 renderThemeToggle();
+renderFontToggle();
