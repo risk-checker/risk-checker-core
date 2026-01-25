@@ -124,6 +124,17 @@
       margin: 12px 0;
     }
 
+    .btn-note {
+      background: var(--box-bg);
+      border: 1px solid var(--btn-border);
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-weight: 700;
+      margin-top: 8px;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+      max-width: 520px;
+    }
+
     .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; align-items:center; }
 
     button {
@@ -319,12 +330,6 @@
     <h1>night checker (WIP)</h1>
     <div id="theme-toggle" class="row small" style="justify-content:flex-end"></div>
 
-    <div class="note">
-      <strong>注意：</strong>
-      診断・評価・判断はしません。<br/>
-      ここで行うのは <strong>Yes/Noの事実確認</strong> だけです（最終判断は人）。
-    </div>
-
     <div id="view"></div>
 
     <div class="hr"></div>
@@ -333,6 +338,9 @@
       ・このページは試作です。<br/>
       ・“OK”“安全”などの断定は出しません。<br/>
       ・必要なら GitHub 上の設計文書に戻る： <a href="https://github.com/risk-checker/risk-checker-core" target="_blank" rel="noreferrer">repo</a>
+    </div>
+    <div class="small muted">
+      ・最終判断や評価をここではしません。夜勤者が自分を守るための事実確認です。
     </div>
   </div>
 
@@ -347,6 +355,7 @@
     const STATE = {
       START: "START",
       Q6: "Q6",
+      Q6_MED: "Q6_MED",
       RESULT_CALL: "RESULT_CALL",
       OBSERVE_30: "OBSERVE_30",
       OBSERVE_60: "OBSERVE_60",
@@ -580,7 +589,7 @@
           const m = MEDICATION_EVENTS.find(x => x.id === id);
           return m ? m.label : id;
         });
-      t.push("【薬の出来事】");
+  t.push("【薬の出来事（チェックがある場合）】");
       t.push(meds.length ? meds.map(x => `・${x}`).join("\n") : "（なし）");
       t.push("");
 
@@ -669,6 +678,18 @@
       render();
     }
 
+    function startSixQuestion(nextState) {
+      const now = nowText();
+      model.lastRunAt = now;
+      model.firstRunAt = now;
+      model.observationStartAt = now;
+      model.recheckRound = 0;
+      model.nextIfAllNo = STATE.OBSERVE_30;
+      recordTimeline("初回6問実施時刻", now);
+      recordTimeline("観察開始時刻", now);
+      setState(nextState);
+    }
+
     function render() {
       const v = $view();
       v.innerHTML = "";
@@ -677,8 +698,12 @@
         v.appendChild(screenStart());
         return;
       }
+      if (model.state === STATE.Q6_MED) {
+        v.appendChild(screenQ6(true));
+        return;
+      }
       if (model.state === STATE.Q6) {
-        v.appendChild(screenQ6());
+        v.appendChild(screenQ6(false));
         return;
       }
       if (model.state === STATE.RESULT_CALL) {
@@ -710,97 +735,50 @@
     function screenStart() {
       const wrap = div("card");
 
-      // 1 screen = 1 action
-      wrap.appendChild(h2("起動（迷ったら開始）"));
+      wrap.appendChild(h2("体調の確認を始める"));
       wrap.appendChild(div(
         "muted",
-        "今やること：6問（Yes/No）を開始する。迷ったら開始してOK。"
+        "迷ったら開始。体調の変化・けが・薬の出来事があったら使う。"
       ));
 
-      const r = div("row");
-      r.appendChild(btn("▶ 開始（6問）", () => {
-        const now = nowText();
-        model.lastRunAt = now;
-        model.firstRunAt = now; // 初回6問の基準時刻
-        model.observationStartAt = now;
-        model.recheckRound = 0;
-        model.nextIfAllNo = STATE.OBSERVE_30;
-        recordTimeline("初回6問実施時刻", now);
-        recordTimeline("観察開始時刻", now);
-        setState(STATE.Q6);
+      const actionRow = div("row");
+      actionRow.appendChild(btn("体調の確認（6問へ）", () => {
+        startSixQuestion(STATE.Q6);
       }, "primary big"));
-      wrap.appendChild(r);
-
-      // ---- Medication events: start 6Q from a medication incident ----
-      const medCard = div("card");
-      medCard.appendChild(h2("薬の出来事（あてはまるものにチェック）"));
-      medCard.appendChild(div(
-        "muted",
-        "ここで意図（わざと/自傷など）は扱いません。事実だけチェックして、すぐ6問へ。"
-      ));
-
-      MEDICATION_EVENTS.forEach(m => {
-        medCard.appendChild(
-          checkboxRow(m.label, model.medicationEvents[m.id], (v) => {
-            model.medicationEvents[m.id] = v;
-          })
-        );
-      });
-
-      const medRow = div("row");
-      medRow.appendChild(btn("▶ 薬の出来事 → 6問を開始", () => {
-        const now = nowText();
-        model.lastRunAt = now;
-        model.firstRunAt = now;
-        model.observationStartAt = now;
-        model.recheckRound = 0;
-        model.nextIfAllNo = STATE.OBSERVE_30;
-
-        const picked = Object.entries(model.medicationEvents)
-          .filter(([, v]) => v)
-          .map(([id]) => {
-            const mm = MEDICATION_EVENTS.find(x => x.id === id);
-            return mm ? mm.label : id;
-          });
-
-  recordTimeline("薬の出来事", picked.length ? picked.join(" / ") : "（未選択のまま開始）");
-  recordTimeline("初回6問実施時刻", now);
-  recordTimeline("観察開始時刻", now);
-
-        setState(STATE.Q6);
-      }, "primary big"));
-
-      medRow.appendChild(btn("チェック解除", () => {
+      actionRow.appendChild(btn("薬の出来事（チェック）", () => {
         Object.keys(model.medicationEvents).forEach(k => model.medicationEvents[k] = false);
-        render();
-      }));
+        startSixQuestion(STATE.Q6_MED);
+      }, "big"));
+      wrap.appendChild(actionRow);
 
-      medCard.appendChild(medRow);
-      wrap.appendChild(medCard);
+      wrap.appendChild(div("muted", "説明できなくてもOK。判断はしない。事実だけ確認する。"));
 
-      // Details are available, but not required to proceed
-      const details = document.createElement("details");
-      details.className = "guide";
-
-      const summary = document.createElement("summary");
-      summary.textContent = "詳細（起動条件 / 外部連絡 / 注意）";
-      details.appendChild(summary);
-
-      details.appendChild(div(
-        "note",
-        "起動条件（迷ったら起動）：\n" +
-          "・本人の訴え / 夜勤の違和感 / 転倒・出血など出来事 / 第三者報告\n" +
-          "・『普段』が分からない → 不明なら安全側（Yes）\n\n" +
-          "外部連絡：\n" +
-          "・外部（訪問診療/訪問看護）へ連絡してよい（情報共有）\n" +
-          "・ただし、このアプリの表示（救急車/再確認）は上書きしない\n\n" +
-          "注意：\n" +
-          "・このツールは診断・評価・判断をしない（Yes/Noの事実確認のみ）"
+      wrap.appendChild(div(
+        "btn-note",
+        "体調の確認ボタンの目安：本人が苦しい/痛い/変だと言う・転倒/出血/ぶつけたなどの出来事・薬の出来事で迷ったとき。"
       ));
 
-      wrap.appendChild(details);
-      
-      // ---- Facility settings (local only) ----
+      wrap.appendChild(div(
+        "btn-note",
+        "薬の出来事ボタンの目安：飲んだ内容が分からない／薬を間違えた／決められた量より多く飲んだことが分かるとき。"
+      ));
+
+      const cautionDetails = document.createElement("details");
+      cautionDetails.className = "guide";
+      const cautionSummary = document.createElement("summary");
+      cautionSummary.textContent = "起動の目安（迷ったら使う）";
+      cautionDetails.appendChild(cautionSummary);
+      cautionDetails.appendChild(div(
+        "note",
+        "【起動の目安（迷ったら使う）】\n\n" +
+          "・本人が「苦しい」「痛い」「変だ」と言った\n" +
+          "・転倒、出血、ぶつけたなどの出来事があった\n" +
+          "・薬が合っているか分からない出来事があった\n\n" +
+          "※ 違和感を言葉にできなくてもOK\n" +
+          "※ 起動は判断ではなく、安全のための行動"
+      ));
+      wrap.appendChild(cautionDetails);
+
       const f = document.createElement("details");
       f.className = "guide";
 
@@ -824,33 +802,56 @@
 
       wrap.appendChild(f);
 
-      const timelineCard = div("card");
-      timelineCard.appendChild(h2("観察ログ（タイムライン）"));
-      const timelineLines = formatTimelineEntries();
-      timelineCard.appendChild(div("note", timelineLines ?? "まだ記録がありません。"));
-      const tlRow = div("row");
-      const copyBtn = btn("ログをコピー", () => copyText(timelineLines || "記録がありません。"), "primary");
-      if (!timelineLines) {
-        copyBtn.disabled = true;
-        copyBtn.setAttribute("aria-disabled", "true");
-      }
-      tlRow.appendChild(copyBtn);
-      timelineCard.appendChild(tlRow);
-      wrap.appendChild(timelineCard);
-
-      // Minimal footer note
-      wrap.appendChild(div("note", "※ このページは“判断”をしません。Yes/Noの事実確認のみです。"));
-
       return wrap;
     }
 
-    function screenQ6() {
+    function screenQ6(showMedication = false) {
       const wrap = document.createElement("div");
 
       // safety: 初回の基準時刻が未設定なら、この時点を初回として固定する
       if (model.recheckRound === 0 && !model.firstRunAt) {
         model.firstRunAt = model.lastRunAt || nowText();
         if (!model.lastRunAt) model.lastRunAt = model.firstRunAt;
+      }
+
+      if (showMedication) {
+        const medCard = div("card");
+        medCard.appendChild(h2("薬の出来事（事実だけチェック）"));
+        medCard.appendChild(div(
+          "muted",
+          "本人が飲んだ内容・量などを事実だけチェックして、6問に進んでください。"
+        ));
+
+        MEDICATION_EVENTS.forEach(m => {
+          medCard.appendChild(
+            checkboxRow(m.label, model.medicationEvents[m.id], (v) => {
+              model.medicationEvents[m.id] = v;
+            })
+          );
+        });
+
+        const medRow = div("row");
+        medRow.appendChild(btn("薬チェックをクリア", () => {
+          Object.keys(model.medicationEvents).forEach(k => model.medicationEvents[k] = false);
+          render();
+        }));
+        medRow.appendChild(btn("このまま6問へ（Q1へスクロール）", () => {
+          const picked = Object.entries(model.medicationEvents)
+            .filter(([, v]) => v)
+            .map(([id]) => {
+              const mm = MEDICATION_EVENTS.find(x => x.id === id);
+              return mm ? mm.label : id;
+            });
+          model.timeline = model.timeline.filter(entry => entry.label !== "薬の出来事");
+          recordTimeline("薬の出来事", picked.length ? picked.join(" / ") : "（なし）");
+          document.getElementById("q1-card")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, "primary"));
+        medRow.appendChild(btn("体調の確認だけに戻す", () => {
+          Object.keys(model.medicationEvents).forEach(k => model.medicationEvents[k] = false);
+          setState(STATE.Q6);
+        }));
+        medCard.appendChild(medRow);
+        wrap.appendChild(medCard);
       }
 
       // Header
@@ -901,6 +902,7 @@
       // Questions
       Q6.forEach((q, i) => {
         const card = div("card");
+        if (i === 0) card.id = "q1-card";
         const title = document.createElement("div");
         title.className = "q-title";
         title.textContent = `Q${i+1}. ${q.text}`;
