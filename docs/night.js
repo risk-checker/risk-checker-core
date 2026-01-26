@@ -514,12 +514,6 @@ function screenQ6(showMedication = false) {
   head.appendChild(h2("夜間リスク確認（6問）"));
   head.appendChild(div("muted", "今の状態を、そのまま答えてください"));
 
-  const banner = div("result observe state-banner",
-    "いまやること：6問に Yes/No を入れる → 『確定する』\n" +
-    "判断しなくて大丈夫です。分からなければ「はい」でOK。"
-  );
-  head.appendChild(banner);
-
   const details = document.createElement("details");
   details.className = "guide";
   const summary = document.createElement("summary");
@@ -584,6 +578,12 @@ function screenQ6(showMedication = false) {
     wrap.appendChild(card);
   });
 
+  const actionBanner = div("result observe state-banner",
+    "いまやること：6問に Yes/No を入れて『確定する』\n" +
+    "推測・原因・評価はしません。分からなければ『はい』でOK（安全確認に進むだけです）。"
+  );
+  wrap.appendChild(actionBanner);
+
   // Actions
   const foot = div("card");
   foot.appendChild(h2("判定（自動）"));
@@ -627,7 +627,8 @@ function screenQ6(showMedication = false) {
 
   wrap.appendChild(foot);
   return wrap;
-}
+}cd ~/projects/risk-checker-core/docs
+python3 -m http.server 8000
 
 function screenCall() {
   const wrap = document.createElement("div");
