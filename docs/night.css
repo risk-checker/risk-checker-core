@@ -391,11 +391,11 @@ html[data-font="lg"] {
 
 /* Extra large mode for maximum readability */
 html[data-font="xl"] {
-  --base-font: 22px;
-  --btn-font: 22px;
-  --btn-pad-y: 20px;
-  --btn-pad-x: 20px;
-  --tap-min-h: 64px;
+  --base-font: 24px;
+  --btn-font: 24px;
+  --btn-pad-y: 22px;
+  --btn-pad-x: 22px;
+  --tap-min-h: 72px;
 }
 
 body {
