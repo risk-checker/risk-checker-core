@@ -423,7 +423,10 @@ function screenStart() {
   choiceCheck.appendChild(btn("体調の確認（6問へ）", () => {
     startSixQuestion(STATE.Q6);
   }, "primary big"));
-  choiceCheck.appendChild(div("when", "押す目安：苦しい／痛い／転倒など、緊急性があると感じたら押してください"));
+  choiceCheck.appendChild(whenNote(
+    "押す目安",
+    "苦しい／痛い／転倒など、緊急性があると感じたら押してください"
+  ));
   wrap.appendChild(choiceCheck);
 
   const choiceMed = div("choice");
@@ -431,7 +434,10 @@ function screenStart() {
     Object.keys(model.medicationEvents).forEach(k => model.medicationEvents[k] = false);
     startSixQuestion(STATE.Q6_MED);
   }, "big"));
-  choiceMed.appendChild(div("when", "押す目安：服薬内容が不明・取り違えが疑われるとき"));
+  choiceMed.appendChild(whenNote(
+    "押す目安",
+    "服薬内容が不明・取り違えが疑われるとき"
+  ));
   wrap.appendChild(choiceMed);
 
   const f = document.createElement("details");
@@ -847,7 +853,7 @@ function screenSleep() {
   card.appendChild(h2("睡眠チェック（睡眠か不明のときの補助）"));
   card.appendChild(div("note",
     "ここで決めるのは『起こして6問』か『起こさず観察』のみ（救急車判定はしない）。\n" +
-    "不明が残るなら『起こして6問』に倒す。"
+    "不明が残るなら『起こして6問』を優先する。"
   ));
   wrap.appendChild(card);
 
@@ -1030,6 +1036,21 @@ function div(className, text) {
     el.textContent = text;
   }
   return el;
+}
+
+function whenNote(label, text) {
+  const note = document.createElement("div");
+  note.className = "when";
+  const heading = document.createElement("span");
+  heading.className = "when-label";
+  heading.textContent = label;
+  const body = document.createElement("span");
+  body.className = "when-text";
+  body.style.whiteSpace = "pre-wrap";
+  body.textContent = text;
+  note.appendChild(heading);
+  note.appendChild(body);
+  return note;
 }
 
 function btn(label, onClick, extraClass) {

@@ -134,13 +134,23 @@ h1 { margin: 0 0 8px; font-size: 22px; }
 
 .choice .when {
   margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.choice .when-label {
   font-size: 13px;
+  font-weight: 700;
+  color: var(--text-strong, inherit);
+}
+.choice .when-text {
+  font-size: 14px;
   color: var(--muted);
   line-height: 1.5;
 }
 
 @media (max-width: 600px){
-  .choice .when { font-size: 14px; }
+  .choice .when-text { font-size: 15px; }
 }
 
 .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; align-items:center; }
