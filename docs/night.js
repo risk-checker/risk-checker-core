@@ -66,6 +66,7 @@ function renderFontToggle(){
   const options = [
     { mode: "normal", text: "標準" },
     { mode: "lg",     text: "大" },
+    { mode: "xl",     text: "特大" },
   ];
 
   const saved = localStorage.getItem(FONT_KEY) || "lg";

@@ -389,6 +389,15 @@ html[data-font="lg"] {
   --tap-min-h: 56px;
 }
 
+/* Extra large mode for maximum readability */
+html[data-font="xl"] {
+  --base-font: 22px;
+  --btn-font: 22px;
+  --btn-pad-y: 20px;
+  --btn-pad-x: 20px;
+  --tap-min-h: 64px;
+}
+
 body {
   font-size: var(--base-font);
   line-height: var(--base-line);
