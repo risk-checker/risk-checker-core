@@ -875,6 +875,13 @@ function screenSleep() {
 
     c.appendChild(r);
 
+    if (i === 0) {
+      c.appendChild(div(
+        "small muted",
+        "（布団等で呼吸の確認ができない場合は『不明』を選んでください。判定は急がず、起こして6問へ展開できます。）"
+      ));
+    }
+
     wrap.appendChild(c);
   });
 
