@@ -627,8 +627,7 @@ function screenQ6(showMedication = false) {
 
   wrap.appendChild(foot);
   return wrap;
-}cd ~/projects/risk-checker-core/docs
-python3 -m http.server 8000
+}
 
 function screenCall() {
   const wrap = document.createElement("div");
