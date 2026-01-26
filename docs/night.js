@@ -719,7 +719,15 @@ function screenCall() {
 
   const familyCopy = document.createElement("pre");
   familyCopy.className = "copybox";
-  familyCopy.textContent = "【家族への連絡（事実通知）】\n（施設）＿＿＿＿です。\n（利用者）＿＿＿＿さんが、救急搬送になりました。\n搬送先：＿＿＿＿病院（※搬送先が確定してから記入）\n※現在の状況の説明は、病院（医師）から行われます。";
+  const qSummaryLines = summary.lines ? summary.lines : summary.short;
+  familyCopy.textContent =
+    "【家族への連絡（事実通知）】\n" +
+    "（施設）＿＿＿＿です。\n" +
+    "（利用者）＿＿＿＿さんが、救急搬送になりました。\n" +
+    "搬送先：＿＿＿＿病院（※搬送先が確定してから記入）\n" +
+    "Qの内容：\n" +
+    qSummaryLines +
+    "\n※必要な説明は、病院（医師）の判断で行われる予定です。";
   familyPanel.appendChild(familyCopy);
 
   const familyBtnRow = div("row");
