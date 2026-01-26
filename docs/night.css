@@ -119,6 +119,19 @@ h1 { margin: 0 0 8px; font-size: 22px; }
   margin: 12px 0;
 }
 
+/* Warning box for family communication (do-not-say checklist) */
+.warn-box {
+  background: rgba(255, 244, 229, 0.9);
+  border: 1px solid rgba(222, 170, 110, 0.9);
+  padding: 12px 14px;
+  border-radius: 8px;
+  margin: 12px 0;
+}
+.warn-box h3 { margin: 0 0 8px; font-size: 14px; }
+.warn-box ul { margin: 0 0 8px 18px; }
+.warn-box li { margin-bottom: 6px; }
+.warn-box .small { font-size: 12px; }
+
 .choice {
   border: 1px solid var(--card-border);
   border-radius: 12px;

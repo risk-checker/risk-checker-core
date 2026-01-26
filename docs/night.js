@@ -717,17 +717,71 @@ function screenCall() {
   familyNote.textContent = "※この文面は「行動要求」をしません。説明は原則、病院（医師）からです。";
   familyPanel.appendChild(familyNote);
 
+  // Warning box: things night staff must NOT tell family
+  const warn = document.createElement("div");
+  warn.className = "warn-box";
+  const warnH = document.createElement("h3");
+  warnH.textContent = "注意：家族へ伝えてはいけないこと（夜勤）";
+  warn.appendChild(warnH);
+  const warnList = document.createElement("ul");
+  const items = [
+    "「たぶん大丈夫です」「軽いと思います」などの評価・予測",
+    "「すぐ来てください」「今すぐ病院へ」などの行動要求（病院の指示がない限り）",
+    "病名・重症度・原因の推測（例：脳梗塞かも、肺炎だと思う 等）",
+    "「誰が悪い」「○○が言ったから」など主語を人にする説明",
+    "今後の方針の約束（入院するはず／帰れるはず／あとで医師から必ず連絡が来る 等）",
+    "謝罪や責任表明（例：こちらのせいです 等）",
+  ];
+  items.forEach(t => { const li = document.createElement('li'); li.textContent = t; warnList.appendChild(li); });
+  warn.appendChild(warnList);
+  const warnNote = document.createElement('div');
+  warnNote.className = 'small muted';
+  warnNote.textContent = "伝えるのは『事実（体の状態）』と『搬送先（確定後）』のみ。判断は病院です。";
+  warn.appendChild(warnNote);
+  familyPanel.appendChild(warn);
+
   const familyCopy = document.createElement("pre");
   familyCopy.className = "copybox";
-  const qSummaryLines = summary.lines ? summary.lines : summary.short;
+
+  // Translate internal Yes answers into family-friendly fact lines (max 2)
+  const mapping = {
+    q1: "反応が普段と違う状態がありました",
+    q2: "呼吸について、問題がないとは言い切れない状況でした",
+    q3: "出血が続いている状態でした",
+    q4: "強い痛みの訴えがありました",
+    q5: "歩けない状態でした",
+    q6: "支えが必要な状態でした",
+  };
+  const familyLines = [];
+  Q6.forEach(q => {
+    if (model.answers[q.id] === true && familyLines.length < 2) {
+      const v = mapping[q.id] || q.text.replace(/\n/g, ' ');
+      familyLines.push(v);
+    }
+  });
+
+  // Ensure two bullets (use blanks if none)
+  while (familyLines.length < 2) familyLines.push("＿＿＿＿＿＿＿＿＿＿＿＿");
+
   familyCopy.textContent =
-    "【家族への連絡（事実通知）】\n" +
-    "（施設）＿＿＿＿です。\n" +
-    "（利用者）＿＿＿＿さんが、救急搬送になりました。\n" +
-    "搬送先：＿＿＿＿病院（※搬送先が確定してから記入）\n" +
-    "Qの内容：\n" +
-    qSummaryLines +
-    "\n※必要な説明は、病院（医師）の判断で行われる予定です。";
+    "【ご連絡（事実通知）】\n" +
+    `施設の ${facilityValue(facility.name)} です。\n` +
+    "\n" +
+    "本日、＿＿＿＿さんの体の状態について夜間に確認を行ったところ、\n" +
+    "医療機関での確認が必要と判断され、救急搬送となりました。\n" +
+    "\n" +
+    "夜間に確認できていた内容としては、次の点があります。\n" +
+    "（読み上げます）\n" +
+    `・${familyLines[0]}\n` +
+    `・${familyLines[1]}\n` +
+    "\n" +
+    "※これは診断や原因の判断ではなく、その時点で確認できた体の状態（事実）です。\n" +
+    "\n" +
+    "現在は病院へ引き継がれており、今後の対応や説明については、\n" +
+    "医療機関の判断により行われます。\n" +
+    "\n" +
+    "現時点で施設からお伝えできる内容は以上です。";
+
   familyPanel.appendChild(familyCopy);
 
   const familyBtnRow = div("row");
