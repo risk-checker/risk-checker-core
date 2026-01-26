@@ -898,7 +898,7 @@ function screenSleep() {
   if (hasNull) {
     decision.appendChild(div("result sleep",
       "⚠ 未回答/不明があります。\n" +
-      "不明が残る場合は『起こして6問へ戻す』に倒してください。"
+      "不明が残る場合は『起こして6問へ戻す』を優先してください。"
     ));
   } else if (allYes(model.sleep)) {
     decision.appendChild(div("result sleep",
