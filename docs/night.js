@@ -416,14 +416,14 @@ function render() {
 
 function screenStart() {
   const wrap = div("card");
-
-  wrap.appendChild(h2("体調の確認を始める"));
+  wrap.appendChild(h2("夜間リスク確認（6問）"));
+  wrap.appendChild(div("muted", "今の状態を、そのまま答えてください"));
 
   const choiceCheck = div("choice");
   choiceCheck.appendChild(btn("体調の確認（6問へ）", () => {
     startSixQuestion(STATE.Q6);
   }, "primary big"));
-  choiceCheck.appendChild(div("when", "※ 苦しい/痛い/変だ・転倒/出血/ぶつけた など（迷ったら押す）"));
+  choiceCheck.appendChild(div("when", "押す目安：苦しい／痛い／転倒など、緊急性があると感じたら押してください"));
   wrap.appendChild(choiceCheck);
 
   const choiceMed = div("choice");
@@ -431,7 +431,7 @@ function screenStart() {
     Object.keys(model.medicationEvents).forEach(k => model.medicationEvents[k] = false);
     startSixQuestion(STATE.Q6_MED);
   }, "big"));
-  choiceMed.appendChild(div("when", "※ 飲んだ内容が不明／取り違え／量が多い（迷ったら押す）"));
+  choiceMed.appendChild(div("when", "押す目安：服薬内容が不明・取り違えが疑われるとき"));
   wrap.appendChild(choiceMed);
 
   const f = document.createElement("details");
@@ -509,14 +509,14 @@ function screenQ6(showMedication = false) {
     wrap.appendChild(medCard);
   }
 
-  // Header
+  // Header (concise, action-oriented)
   const head = div("card");
-  head.appendChild(h2(`6問（今この瞬間の事実のみ）${model.recheckRound===0?"（初回）":model.recheckRound===1?"（30分後の再実施）":"（60分後の再実施）"}`));
-  head.appendChild(div("muted", `最終実行: ${model.lastRunAt ?? "未実行"}`));
-  // Night-shift first: show the next action first, keep rules in details
+  head.appendChild(h2("夜間リスク確認（6問）"));
+  head.appendChild(div("muted", "今の状態を、そのまま答えてください"));
+
   const banner = div("result observe state-banner",
     "いまやること：6問に Yes/No を入れる → 『確定する』\n" +
-    "（推測・原因・評価はしない。迷ったら不明→安全側）"
+    "判断しなくて大丈夫です。分からなければ「はい」でOK。"
   );
   head.appendChild(banner);
 
@@ -527,9 +527,10 @@ function screenQ6(showMedication = false) {
   details.appendChild(summary);
   details.appendChild(div(
     "note",
-    "ルール：1つでもYes→救急車（119） / 全てNo→再確認（30→60）。\n" +
-      "※推測・原因・評価は禁止。\n" +
-      "※『普段』＝いつものその人（正常/理想ではない）。不明なら安全側（Yes）。"
+    "・6問は「今この瞬間の事実のみ」を答えてください。\n" +
+    "・推測・原因・評価は行わないでください。\n" +
+    "・分からなければ「はい」でOK（安全側の確認に進みます）。\n" +
+    "・入力後は『確定する』を押してください。"
   ));
   head.appendChild(details);
   wrap.appendChild(head);
