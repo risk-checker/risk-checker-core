@@ -172,7 +172,7 @@ function facilityValue(v) {
 function nowText() {
   const d = new Date();
   const pad = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 function recordTimeline(label, time) {
@@ -316,13 +316,28 @@ function yesQuestionSummary() {
     if (model.answers[q.id] === true) {
       const n = i + 1;
       yesIdx.push(`Q${n}`);
-      yesLines.push(`Q${n}: ${q.text}`);
+      const label = q.internalLabel || q.text;
+      yesLines.push(`${label}`);
     }
   });
   return {
     short: yesIdx.length ? yesIdx.join(", ") : "（なし）",
     lines: yesLines.join("\n"),
   };
+}
+
+function externalFactStatements(field, limit) {
+  const statements = [];
+  Q6.forEach((q) => {
+    if (model.answers[q.id] === true && q[field]) {
+      statements.push(q[field]);
+    }
+  });
+  return typeof limit === "number" ? statements.slice(0, limit) : statements;
+}
+
+function hasUnconfirmedItems() {
+  return Object.values(model.answers).some(v => v === null);
 }
 
 function copyText(text){
@@ -375,6 +390,8 @@ function startSixQuestion(nextState) {
 function render() {
   const v = $view();
   v.innerHTML = "";
+  const isEmergency = model.state === STATE.RESULT_CALL;
+  document.body.classList.toggle("emergency", isEmergency);
 
   if (model.state === STATE.START) {
     v.appendChild(screenStart());
@@ -415,19 +432,52 @@ function render() {
  * Screens
  */
 
+const START_HINTS = [
+  "苦しい／痛い／変だと言う",
+  "転倒／出血／ぶつけた",
+  "薬：内容が不明／取り違え／量が多い",
+  "説明できなくてもOK（安全のため）",
+];
+
 function screenStart() {
   const wrap = div("card");
   wrap.appendChild(h2("夜間リスク確認（6問）"));
   wrap.appendChild(div("muted", "今の状態を、そのまま答えてください"));
 
+  const hint = document.createElement("div");
+  hint.className = "startup-hints";
+  const hintTitle = document.createElement("div");
+  hintTitle.className = "startup-hints-title";
+  hintTitle.textContent = "起動の目安（迷ったら押す）";
+  hint.appendChild(hintTitle);
+  const hintList = document.createElement("ul");
+  START_HINTS.forEach(item => {
+    const li = document.createElement("li");
+    li.textContent = item;
+    hintList.appendChild(li);
+  });
+  hint.appendChild(hintList);
+  wrap.appendChild(hint);
+
+  const detail = document.createElement("details");
+  detail.className = "guide";
+  const detailSummary = document.createElement("summary");
+  detailSummary.textContent = "起動の目安（くわしく）";
+  detail.appendChild(detailSummary);
+  detail.appendChild(div(
+    "note",
+    "・呼吸・意識・体調の変化（苦しい・痛い・ふらつき）\n" +
+    "・転倒・出血・ぶつけた/ぶつかったなど外傷\n" +
+    "・薬の内容が不明、取り違え、量が多いなど疑い\n" +
+    "・説明できなくても、安全を最優先にして押してください"
+  ));
+  wrap.appendChild(detail);
+
   const choiceCheck = div("choice");
   choiceCheck.appendChild(btn("体調の確認（6問へ）", () => {
     startSixQuestion(STATE.Q6);
   }, "primary big"));
-  choiceCheck.appendChild(whenNote(
-    "押す目安",
-    "苦しい／痛い／転倒など、緊急性があると感じたら押してください"
-  ));
+  choiceCheck.appendChild(div("muted startup-button-note", "※迷ったら押す（体調の変化・ケガなど）"));
   wrap.appendChild(choiceCheck);
 
   const choiceMed = div("choice");
@@ -435,10 +485,7 @@ function screenStart() {
     Object.keys(model.medicationEvents).forEach(k => model.medicationEvents[k] = false);
     startSixQuestion(STATE.Q6_MED);
   }, "big"));
-  choiceMed.appendChild(whenNote(
-    "押す目安",
-    "服薬内容が不明・取り違えが疑われるとき"
-  ));
+  choiceMed.appendChild(div("muted startup-button-note", "※迷ったら押す（薬が不明/取り違え/量が多い）"));
   wrap.appendChild(choiceMed);
 
   const f = document.createElement("details");
@@ -638,160 +685,128 @@ function screenQ6(showMedication = false) {
 
 function screenCall() {
   const wrap = document.createElement("div");
-  const card = div("card");
+
+  // この画面は判断のためのものではなく、夜勤者が評価や責任を負わずに
+  // 事実だけを伝えるための定型文を提供するUIです。
+  // 最終判断・説明・評価はすべて医療機関へ戻します。
 
   const summary = yesQuestionSummary();
-
-  card.appendChild(h2("表示：救急車（119）"));
-
-  // Primary, big, unmissable state/action
-  const primary = div(
-    "result call state-banner",
-    "✅ 行動：119（救急車）\n" +
-      "条件一致：Yesあり（" + summary.short + ")"
-  );
-  card.appendChild(primary);
-
-  // Show exactly which questions were Yes
   const now = nowText();
-  const callText = [
+  const hasYes = anyYes(model.answers);
+
+  const summaryCard = div("card emergency-summary-card");
+  summaryCard.appendChild(h2("状態サマリ"));
+  summaryCard.appendChild(div("emergency-summary-text", [
+    "────────────────────────────",
+    "表示：救急車（119）",
+    "行動：119（実行）",
+    `条件一致：${hasYes ? "該当する事実あり" : "該当する事実なし"}`,
+    `判定時刻：${now}`,
+    "────────────────────────────",
+  ].join("\n")));
+  wrap.appendChild(summaryCard);
+
+  const callFacts = externalFactStatements("externalForEMS");
+  const callFactText = callFacts.length
+    ? callFacts.map(f => `・${f}`).join("\n")
+    : "・（確認できた事実はありません）";
+
+  const callLines = [
     "【救急要請（119）】",
     `こちらは ${facilityValue(facility.name)} です。`,
     `住所は ${facilityValue(facility.address)} です。`,
     facilityValue(facility.phone) !== "＿＿＿＿" ? `折り返し電話は ${facilityValue(facility.phone)} です。` : "折り返し電話は（未入力）です。",
     "利用者：＿＿歳、＿＿性。",
-    `『6問』で Yes になったのは ${summary.short} です。`,
+    "確認できている事実です。",
+    callFactText,
     `判定時刻：${now}`,
     "（内容を読み上げます）",
-    summary.lines ? summary.lines : "（Yesの詳細はなし）",
     "※原因の推測や評価は言いません。"
+  ];
+  const callText = callLines.join("\n");
+
+  const callSection = document.createElement("section");
+  callSection.className = "card emergency-call-card";
+  callSection.appendChild(h2("救急隊へ伝える（読み上げ／コピペ用）"));
+  callSection.appendChild(div("muted", "外部連絡ではQ1〜Q6やYes/Noを使わず、確認できている事実だけを読み上げます。評価や推測を控え、事実だけを伝えてください。"));
+  callSection.appendChild(div("result call", callText));
+  if (hasUnconfirmedItems()) {
+    callSection.appendChild(div("muted", "一部の項目は現時点で確認できておらず、判断できていません。"));
+  }
+  const callRow = div("row");
+  callRow.appendChild(btn("コピーする", () => { copyText(callText); toast("コピーしました"); }, "primary"));
+  callSection.appendChild(callRow);
+  callSection.appendChild(div("muted emergency-contact-note", "外部（訪問診療・訪問看護など）には状態通知のみ。判定の相談や上書きは避け、搬送先は救急隊です。"));
+  wrap.appendChild(callSection);
+
+  const actionRow = div("row");
+  actionRow.appendChild(btn("6問へ戻る（状況変化）", () => setState(STATE.Q6)));
+  actionRow.appendChild(btn("最初からやり直す", () => resetAll()));
+  wrap.appendChild(actionRow);
+
+  const familyFacts = externalFactStatements("externalForFamily", 2);
+  while (familyFacts.length < 2) familyFacts.push("＿＿＿＿＿＿＿＿＿＿＿＿");
+  const familyCopyText = [
+    "【ご連絡（事実通知）】",
+    `施設の ${facilityValue(facility.name)} です。`,
+    "",
+    "本日、夜間に利用者の体の状態を確認したところ、",
+    "医療機関での確認が必要と判断され、救急搬送となりました。",
+    "",
+    "確認できている事実としては、次の点があります。",
+    "（読み上げます）",
+    `・${familyFacts[0]}`,
+    `・${familyFacts[1]}`,
+    "",
+    "※これは診断や原因の判断ではなく、その時点で確認できていた体の状態（事実）です。",
+    "",
+    "現在は病院へ引き継がれており、今後の対応や説明については医療機関の判断により行われます。",
+    "",
+    "現時点で施設からお伝えできる内容は以上です。"
   ].join("\n");
 
-  const callDetails = document.createElement("details");
-  callDetails.className = "guide";
-  callDetails.setAttribute("open", "");
-  const callSummary = document.createElement("summary");
-  callSummary.textContent = "救急隊へ伝える（読み上げ/コピペ用）";
-  callDetails.appendChild(callSummary);
-  callDetails.appendChild(div("muted", "空欄は口頭で補ってOK。『Yesになった問診』だけ伝える。"));
-  callDetails.appendChild(div("result", callText));
-  const cr = div("row");
-  cr.appendChild(btn("コピーする", () => { copyText(callText); toast("コピーしました"); }, "primary"));
-  callDetails.appendChild(cr);
-  card.appendChild(callDetails);
+  const familySection = document.createElement("section");
+  familySection.className = "card family-card";
+  familySection.appendChild(h2("家族へ伝える（搬送先が確定した後／事実のみ）"));
+  familySection.appendChild(div("muted", "搬送先が確定した後、普段との違いとして確認できている事実だけを短く伝えます。診断・原因・評価は含みません。"));
+  const familyCopy = document.createElement("pre");
+  familyCopy.className = "copybox";
+  familyCopy.textContent = familyCopyText;
+  familySection.appendChild(familyCopy);
+  const familyBtnRow = div("row");
+  familyBtnRow.appendChild(btn("コピーする", () => { copyText(familyCopyText); toast("コピーしました"); }, "primary"));
+  familySection.appendChild(familyBtnRow);
+  wrap.appendChild(familySection);
 
-  // External contact rule (kept short)
-  const external = document.createElement("details");
-  external.className = "guide";
-  const externalSummary = document.createElement("summary");
-  externalSummary.textContent = "外部連絡（短いルール）";
-  external.appendChild(externalSummary);
-  external.appendChild(div(
-    "note",
-    "外部（訪問診療/訪問看護）は『状態通知』のみ。判定の相談・上書きはしない。\n" +
-      "※搬送先は救急隊。"
-  ));
-  card.appendChild(external);
+  appendRecordLogCard(wrap, "（救急車表示）");
 
-  const r = div("row");
-  r.appendChild(btn("6問へ戻る（状況変化）", () => setState(STATE.Q6)));
-  r.appendChild(btn("最初からやり直す", () => resetAll()));
-  card.appendChild(r);
+  const emergencyDisclaimer = div("note emergency-disclaimer",
+    "この文面は行動要求や診断を伝えるものではありません。診断や評価は病院（医師）が行います。夜勤は事実確認と搬送状況だけを共有します。"
+  );
+  wrap.appendChild(emergencyDisclaimer);
 
-  wrap.appendChild(card);
-  /*
-  この表示は「判断」ではなく「期待値調整」のための定型文。
-  施設は家族の来院要否・病状評価・連絡要否を判断しない。
-  判断主体は常に医師。
-  */
-  const familyDetails = document.createElement("details");
-  familyDetails.className = "family-template guide";
-  const familySummary = document.createElement("summary");
-  familySummary.textContent = "家族へ伝える（搬送先が決まった後／事実のみ）";
-  familyDetails.appendChild(familySummary);
-
-  const familyPanel = document.createElement("div");
-  familyPanel.className = "panel";
-  const familyNote = document.createElement("p");
-  familyNote.className = "muted";
-  familyNote.textContent = "※この文面は「行動要求」をしません。説明は原則、病院（医師）からです。";
-  familyPanel.appendChild(familyNote);
-
-  // Warning box: things night staff must NOT tell family
-  const warn = document.createElement("div");
-  warn.className = "warn-box";
+  const emergencyWarn = document.createElement("div");
+  emergencyWarn.className = "warn-box emergency-warn-box";
   const warnH = document.createElement("h3");
-  warnH.textContent = "注意：家族へ伝えてはいけないこと（夜勤）";
-  warn.appendChild(warnH);
+  warnH.textContent = "夜勤が伝えてはいけないこと";
+  emergencyWarn.appendChild(warnH);
   const warnList = document.createElement("ul");
   const items = [
     "「たぶん大丈夫です」「軽いと思います」などの評価・予測",
     "「すぐ来てください」「今すぐ病院へ」などの行動要求（病院の指示がない限り）",
-    "病名・重症度・原因の推測（例：脳梗塞かも、肺炎だと思う 等）",
-    "「誰が悪い」「○○が言ったから」など主語を人にする説明",
-    "今後の方針の約束（入院するはず／帰れるはず／あとで医師から必ず連絡が来る 等）",
-    "謝罪や責任表明（例：こちらのせいです 等）",
+    "病名・原因・重症度の推測（例：脳梗塞かも、肺炎だと思う等）",
+    "「○○が判断した」「私のミスで」などの責任・主語を人にする説明",
+    "今後の方針の約束（例：入院するはず、必ず医師から連絡）",
+    "謝罪や責任表明",
   ];
   items.forEach(t => { const li = document.createElement('li'); li.textContent = t; warnList.appendChild(li); });
-  warn.appendChild(warnList);
+  emergencyWarn.appendChild(warnList);
   const warnNote = document.createElement('div');
   warnNote.className = 'small muted';
   warnNote.textContent = "伝えるのは『事実（体の状態）』と『搬送先（確定後）』のみ。判断は病院です。";
-  warn.appendChild(warnNote);
-  familyPanel.appendChild(warn);
+  emergencyWarn.appendChild(warnNote);
+  wrap.appendChild(emergencyWarn);
 
-  const familyCopy = document.createElement("pre");
-  familyCopy.className = "copybox";
-
-  // Translate internal Yes answers into family-friendly fact lines (max 2)
-  const mapping = {
-    q1: "反応が普段と違う状態がありました",
-    q2: "呼吸について、問題がないとは言い切れない状況でした",
-    q3: "出血が続いている状態でした",
-    q4: "強い痛みの訴えがありました",
-    q5: "歩けない状態でした",
-    q6: "支えが必要な状態でした",
-  };
-  const familyLines = [];
-  Q6.forEach(q => {
-    if (model.answers[q.id] === true && familyLines.length < 2) {
-      const v = mapping[q.id] || q.text.replace(/\n/g, ' ');
-      familyLines.push(v);
-    }
-  });
-
-  // Ensure two bullets (use blanks if none)
-  while (familyLines.length < 2) familyLines.push("＿＿＿＿＿＿＿＿＿＿＿＿");
-
-  familyCopy.textContent =
-    "【ご連絡（事実通知）】\n" +
-    `施設の ${facilityValue(facility.name)} です。\n` +
-    "\n" +
-    "本日、＿＿＿＿さんの体の状態について夜間に確認を行ったところ、\n" +
-    "医療機関での確認が必要と判断され、救急搬送となりました。\n" +
-    "\n" +
-    "夜間に確認できていた内容としては、次の点があります。\n" +
-    "（読み上げます）\n" +
-    `・${familyLines[0]}\n` +
-    `・${familyLines[1]}\n` +
-    "\n" +
-    "※これは診断や原因の判断ではなく、その時点で確認できた体の状態（事実）です。\n" +
-    "\n" +
-    "現在は病院へ引き継がれており、今後の対応や説明については、\n" +
-    "医療機関の判断により行われます。\n" +
-    "\n" +
-    "現時点で施設からお伝えできる内容は以上です。";
-
-  familyPanel.appendChild(familyCopy);
-
-  const familyBtnRow = div("row");
-  const copyFamily = btn("コピーする", () => { copyText(familyCopy.textContent); toast("コピーしました"); }, "primary");
-  familyBtnRow.appendChild(copyFamily);
-  familyPanel.appendChild(familyBtnRow);
-
-  familyDetails.appendChild(familyPanel);
-  wrap.appendChild(familyDetails);
-  appendRecordLogCard(wrap, "（救急車表示）");
   return wrap;
 }
 
@@ -1184,6 +1199,14 @@ function bootNight() {
   } catch (e) {
     // swallow — in production we might log
     console.error('bootNight error', e);
+    const view = document.getElementById("view");
+    if (view) {
+      view.innerHTML = "";
+      const errorCard = div("card");
+      errorCard.appendChild(h2("初期化エラー"));
+      errorCard.appendChild(div("muted", "初期化に失敗しました。Consoleを確認してください。"));
+      view.appendChild(errorCard);
+    }
   }
 }
 

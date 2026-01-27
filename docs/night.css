@@ -8,6 +8,8 @@
   --bg: #fafafa;
   --fg: #111;
   --muted: #666;
+  --warn-bg: rgba(255, 244, 229, 0.95);
+  --warn-border: rgba(222, 170, 110, 0.95);
 
   --box-bg: #fff;
   --border: #e5e5e5;
@@ -39,6 +41,8 @@ html[data-theme="dark"] {
   --bg: #0b0c10;
   --fg: #f3f4f6;
   --muted: #a9adb7;
+  --warn-bg: rgba(40, 46, 56, 0.9);
+  --warn-border: rgba(138, 138, 153, 0.9);
 
   --box-bg: #0f1117;
   --border: #2a2f3a;
@@ -121,8 +125,8 @@ h1 { margin: 0 0 8px; font-size: 22px; }
 
 /* Warning box for family communication (do-not-say checklist) */
 .warn-box {
-  background: rgba(255, 244, 229, 0.9);
-  border: 1px solid rgba(222, 170, 110, 0.9);
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-border);
   padding: 12px 14px;
   border-radius: 8px;
   margin: 12px 0;
@@ -131,6 +135,77 @@ h1 { margin: 0 0 8px; font-size: 22px; }
 .warn-box ul { margin: 0 0 8px 18px; }
 .warn-box li { margin-bottom: 6px; }
 .warn-box .small { font-size: 12px; }
+
+.copybox {
+  font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
+  white-space: pre-wrap;
+  margin: 0 0 10px;
+  padding: 10px;
+  border-radius: 8px;
+  background: var(--box-bg);
+  border: 1px solid var(--border);
+  color: var(--fg);
+}
+
+.family-card {
+  background: var(--note-bg);
+  border-radius: 10px;
+  border: 1px solid var(--card-border);
+  padding: 14px;
+  margin-top: 12px;
+  color: var(--fg);
+}
+
+.family-card .copybox {
+  background: var(--box-bg);
+}
+
+.emergency-summary-card {
+  border-color: var(--result-call-border);
+  border-width: 2px;
+  padding: 16px 18px;
+  margin-top: 10px;
+}
+
+.emergency-summary-card .q-title {
+  font-size: 16px;
+  margin-bottom: 6px;
+}
+
+.emergency-summary-text {
+  font-weight: 700;
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
+.emergency-call-card .muted {
+  margin-bottom: 10px;
+}
+
+.emergency-contact-note {
+  font-size: 13px;
+}
+
+.emergency-disclaimer {
+  margin-top: 18px;
+}
+
+.emergency-warn-box {
+  margin-top: 18px;
+}
+
+body.emergency .card {
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+}
+
+body.emergency .row {
+  margin-top: 16px;
+}
+
+body.emergency button {
+  font-size: 1rem;
+}
 
 .choice {
   border: 1px solid var(--card-border);
@@ -272,33 +347,6 @@ details.guide {
 }
 
 /* Family contact template (theme-aware: no white panel in dark mode) */
-details.family-template {
-  background: var(--note-bg);
-  border-radius: 10px;
-  border: 1px solid var(--card-border);
-  padding: 12px;
-  margin-top: 12px;
-  color: var(--fg);
-}
-
-.family-template .panel {
-  margin-top: 8px;
-  background: var(--box-bg);
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-}
-
-.family-template .copybox {
-  font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
-  white-space: pre-wrap;
-  margin: 0 0 10px;
-  padding: 10px;
-  border-radius: 8px;
-  background: var(--box-bg);
-  border: 1px solid var(--border);
-  color: var(--fg);
-}
 
 details.guide > summary {
   cursor: pointer;
@@ -328,6 +376,30 @@ button.danger { border-color: var(--result-call-border); }
   padding: 14px;
   margin: 12px 0;
   background: var(--box-bg);
+}
+
+.startup-hints {
+  border: 1px solid rgba(120, 130, 145, 0.25);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 14px;
+  background: var(--note-bg);
+  color: var(--fg);
+}
+.startup-hints-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.startup-hints ul {
+  padding-left: 18px;
+  margin: 6px 0 0;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+.startup-button-note {
+  font-size: 0.95rem;
+  margin-top: 8px;
 }
 
 .q-title { font-weight: 700; margin: 0 0 6px; }
@@ -378,8 +450,6 @@ button.danger { border-color: var(--result-call-border); }
 .toast.hidden { display: none; }
 
 a { color: inherit; }
-details.family-template summary { color: var(--fg); }
-details.family-template .muted { color: var(--muted); }
 /* =========================
    Accessibility: 70s / Night shift
    ========================= */
@@ -414,6 +484,24 @@ html[data-font="xl"] {
 body {
   font-size: var(--base-font);
   line-height: var(--base-line);
+}
+
+body.emergency {
+  font-size: calc(var(--base-font) + 2px);
+}
+
+body.emergency .card {
+  padding: 18px;
+}
+
+body.emergency .row {
+  gap: 16px;
+}
+
+body.emergency button {
+  font-size: calc(var(--btn-font) + 2px);
+  padding: calc(var(--btn-pad-y) + 4px) calc(var(--btn-pad-x) + 4px);
+  min-height: calc(var(--tap-min-h) + 4px);
 }
 
 /* Make buttons easy to hit */
