@@ -70,4 +70,5 @@ export const MEDICATION_EVENTS = [
   { id: "m1", label: "飲んだ内容が確認できない" },
   { id: "m2", label: "本人の薬ではないものを飲んだ" },
   { id: "m3", label: "決められた量より多く飲んだことが確認されている" },
+  { id: "m_refusal", label: "拒薬があった（飲めない／飲まない）" },
 ];

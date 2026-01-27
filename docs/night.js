@@ -14,6 +14,8 @@ const model = {
   returnAfterSleep: STATE.Q6,    // 睡眠チェック後に戻す画面（導線固定）
   timeline: [],
   observationStartAt: null,
+  familyCall: { status: "none", time: null },
+  familyCallFormOpen: false,
 };
 
 const $view = () => document.getElementById("view");
@@ -151,7 +153,9 @@ function loadFacility() {
     facility.name = obj.name || "";
     facility.address = obj.address || "";
     facility.phone = obj.phone || "";
-  } catch (e) {}
+  } catch (e) {
+    // ignore
+  }
 }
 
 function saveFacility() {
@@ -195,6 +199,8 @@ function resetAll() {
   model.returnAfterSleep = STATE.Q6;
   model.timeline = [];
   model.observationStartAt = null;
+  model.familyCall = { status: "none", time: null };
+  model.familyCallFormOpen = false;
   model.state = STATE.START;
   render();
 }
@@ -261,9 +267,12 @@ function buildRecordText(extraTitle) {
   t.push(tl ? tl : "（記録なし）");
   t.push("");
 
-  t.push("【家族連絡】");
-  t.push("・病状説明やご連絡は、必要と判断された場合に病院（医師）から行われます。");
-  t.push("");
+  if (model.familyCall.status !== "none" && model.familyCall.time) {
+    const statusText = model.familyCall.status === "connected" ? "つながった" : "つながらなかった";
+    t.push("【家族連絡（事実ログ）】");
+    t.push(`・${model.familyCall.time} 家族へ架電：${statusText}`);
+    t.push("");
+  }
 
   const meds = Object.entries(model.medicationEvents)
     .filter(([, v]) => v)
@@ -278,13 +287,6 @@ function buildRecordText(extraTitle) {
   t.push("【6問（最新）】");
   t.push(q6AnswerLines());
   t.push("");
-
-  const touchedSleep = Object.values(model.sleep).some(v => v !== null);
-  if (touchedSleep) {
-    t.push("【睡眠チェック（実施した場合）】");
-    t.push(sleepAnswerLines());
-    t.push("");
-  }
 
   t.push("【現在の表示】");
   if (model.state === STATE.RESULT_CALL) {
@@ -305,7 +307,7 @@ function buildRecordText(extraTitle) {
   }
 
   t.push("");
-  t.push("※このテキストは診断・評価ではなく、Yes/Noの事実記録です。");
+  t.push("※本記録は診断・評価ではなく、夜間におけるYes/Noの事実確認ログです。");
   return t.join("\n");
 }
 
@@ -743,6 +745,38 @@ function screenCall() {
   actionRow.appendChild(btn("6問へ戻る（状況変化）", () => setState(STATE.Q6)));
   actionRow.appendChild(btn("最初からやり直す", () => resetAll()));
   wrap.appendChild(actionRow);
+
+  const setFamilyCallStatus = (status) => {
+    model.familyCall.status = status;
+    model.familyCall.time = nowText();
+    model.familyCallFormOpen = false;
+    render();
+  };
+
+  const familyCallCard = div("card family-call-log-card");
+  familyCallCard.appendChild(h2("家族へ架電（記録）"));
+  familyCallCard.appendChild(div("muted", "連絡の事実とつながったか／つながらなかったかを記録します。評価や判断は含みません。"));
+  const callStatusText = div("muted");
+  if (model.familyCall.status === "none") {
+    callStatusText.textContent = "まだ架電記録はありません。";
+  } else {
+    const statusText = model.familyCall.status === "connected" ? "つながった" : "つながらなかった";
+    callStatusText.textContent = `${model.familyCall.time} 家族へ架電：${statusText}`;
+  }
+  familyCallCard.appendChild(callStatusText);
+  const familyCallRow = div("row");
+  familyCallRow.appendChild(btn("家族へ架電（記録）", () => {
+    model.familyCallFormOpen = true;
+    render();
+  }));
+  familyCallCard.appendChild(familyCallRow);
+  if (model.familyCallFormOpen) {
+    const logRow = div("row");
+    logRow.appendChild(btn("つながった", () => setFamilyCallStatus("connected"), "primary"));
+    logRow.appendChild(btn("つながらなかった", () => setFamilyCallStatus("no_answer")));
+    familyCallCard.appendChild(logRow);
+  }
+  wrap.appendChild(familyCallCard);
 
   const familyFacts = externalFactStatements("externalForFamily", 2);
   while (familyFacts.length < 2) familyFacts.push("＿＿＿＿＿＿＿＿＿＿＿＿");
