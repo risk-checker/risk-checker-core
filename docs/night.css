@@ -323,9 +323,10 @@ button.big {
   body { margin: 12px; }
   .box { margin: 0 auto; padding: 12px; border-radius: 10px; }
 
-  /* On narrow phones, stack rows so buttons are full-width and easy to tap */
-  .row { flex-direction: column; align-items: stretch; }
-  .row > button, .row > * { width: 100%; }
+  /* On narrow phones, stack row-heavy UI blocks so buttons are full-width and easy to tap.
+    Do NOT change the header row (keeps theme/font toggles on the right). */
+  .card > .row, .choice, .family-card .row, .emergency-call-card .row { flex-direction: column; align-items: stretch; }
+  .card > .row > button, .choice button, .family-card .row > button, .emergency-call-card .row > button { width: 100%; }
 
 
 /* Very small screens: keep toggles compact */
