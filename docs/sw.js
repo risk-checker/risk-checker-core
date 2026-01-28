@@ -1,4 +1,4 @@
-const CACHE_NAME = "night-checker-v1";
+const CACHE_NAME = "night-checker-v2";
 const ASSETS = [
   "./",
   "./night.html",
