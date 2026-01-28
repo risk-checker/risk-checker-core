@@ -107,6 +107,8 @@ body {
 
 .box {
   max-width: 860px;
+  width: 100%;
+  box-sizing: border-box;
   background: var(--box-bg);
   padding: 20px;
   border-radius: 12px;
@@ -287,6 +289,20 @@ button.big {
 
   .box { padding: 14px; }
 
+  /* Reduce outer margin for small screens and ensure box keeps some breathing room */
+  body { margin: 12px; }
+  .box { margin: 0 auto; padding: 12px; border-radius: 10px; }
+
+  /* On narrow phones, stack rows so buttons are full-width and easy to tap */
+  .row { flex-direction: column; align-items: stretch; }
+  .row > button, .row > * { width: 100%; }
+
+
+/* Very small screens: keep toggles compact */
+@media (max-width: 420px) {
+  body { margin: 8px; }
+  .box { padding: 10px; }
+}
   h1 { font-size: 20px; }
 
   /* Make choice cards and primary buttons larger and easier to tap */
