@@ -810,7 +810,9 @@ function screenCall() {
   const exceptionRow = div("row");
   exceptionRow.appendChild(btn("例外を記録する", () => {
     model.emsCallFormOpen = true;
-    render();
+  render();
+  // Ensure the page starts at the top on initial load (prevent mid-page start)
+  try { if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') window.scrollTo(0, 0); } catch (e) { /* ignore */ }
   }));
   emsCallCard.appendChild(exceptionRow);
 
