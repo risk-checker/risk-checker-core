@@ -920,6 +920,34 @@ function screenCall() {
   // 読み上げ用：見える範囲に収めて、上から読むだけ
   familySection.appendChild(div("result", familyReadAloudText));
 
+  // 1行ブレーキ：評価・予測・約束を言わないことを明示（家族への読み上げ直後に必ず見える位置）
+  familySection.appendChild(div("small muted",
+    "※評価・予測・約束は言いません。事実（体の状態）と搬送先（確定後）だけを伝えます。"
+  ));
+
+  // 注意喚起ブロック（夜勤が伝えてはいけないこと）を家族説明の直後に配置
+  const emergencyWarn = document.createElement("div");
+  emergencyWarn.className = "warn-box emergency-warn-box";
+  const warnH = document.createElement("h3");
+  warnH.textContent = "夜勤が伝えてはいけないこと";
+  emergencyWarn.appendChild(warnH);
+  const warnList = document.createElement("ul");
+  const items = [
+    "「たぶん大丈夫です」「軽いと思います」などの評価・予測",
+    "「すぐ来てください」「今すぐ病院へ」などの行動要求（病院の指示がない限り）",
+    "病名・原因・重症度の推測（例：脳梗塞かも、肺炎だと思う等）",
+    "「○○が判断した」「私のミスで」などの責任・主語を人にする説明",
+    "今後の方針の約束（例：入院するはず、必ず医師から連絡）",
+    "謝罪や責任表明",
+  ];
+  items.forEach(t => { const li = document.createElement('li'); li.textContent = t; warnList.appendChild(li); });
+  emergencyWarn.appendChild(warnList);
+  const warnNote = document.createElement('div');
+  warnNote.className = 'small muted';
+  warnNote.textContent = "伝えるのは『事実（体の状態）』と『搬送先（確定後）』のみ。判断は病院です。";
+  emergencyWarn.appendChild(warnNote);
+  familySection.appendChild(emergencyWarn);
+
   // ※は読まない（夜勤の安全装置として表示のみ）
   const familyNote = div(
     "small muted",
@@ -956,28 +984,6 @@ function screenCall() {
     "この文面は行動要求や診断を伝えるものではありません。診断や評価は病院（医師）が行います。夜勤は事実確認と搬送状況だけを共有します。"
   );
   wrap.appendChild(emergencyDisclaimer);
-
-  const emergencyWarn = document.createElement("div");
-  emergencyWarn.className = "warn-box emergency-warn-box";
-  const warnH = document.createElement("h3");
-  warnH.textContent = "夜勤が伝えてはいけないこと";
-  emergencyWarn.appendChild(warnH);
-  const warnList = document.createElement("ul");
-  const items = [
-    "「たぶん大丈夫です」「軽いと思います」などの評価・予測",
-    "「すぐ来てください」「今すぐ病院へ」などの行動要求（病院の指示がない限り）",
-    "病名・原因・重症度の推測（例：脳梗塞かも、肺炎だと思う等）",
-    "「○○が判断した」「私のミスで」などの責任・主語を人にする説明",
-    "今後の方針の約束（例：入院するはず、必ず医師から連絡）",
-    "謝罪や責任表明",
-  ];
-  items.forEach(t => { const li = document.createElement('li'); li.textContent = t; warnList.appendChild(li); });
-  emergencyWarn.appendChild(warnList);
-  const warnNote = document.createElement('div');
-  warnNote.className = 'small muted';
-  warnNote.textContent = "伝えるのは『事実（体の状態）』と『搬送先（確定後）』のみ。判断は病院です。";
-  emergencyWarn.appendChild(warnNote);
-  wrap.appendChild(emergencyWarn);
 
   return wrap;
 }
