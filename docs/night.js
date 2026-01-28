@@ -1038,6 +1038,24 @@ function screenObserve(mins, nextState) {
     )
   );
 
+  // 本人が拒否して6問が実施できなかった事実を記録する（入力は求めない）
+  r.appendChild(
+    btn(
+      "本人拒否で6問不可（記録）",
+      () => {
+        const now = nowText();
+        recordTimeline(`${mins}分後確認：6問未実施（本人拒否）`, now);
+        // 遷移：30分なら60分観察へ、60分なら引き継ぎへ
+        if (mins === 30) {
+          setState(STATE.OBSERVE_60);
+        } else {
+          setState(STATE.HANDOFF);
+        }
+      },
+      "danger"
+    )
+  );
+
   // 補助：睡眠か不明
   r.appendChild(
     btn(
