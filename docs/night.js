@@ -205,8 +205,8 @@ function resetAll() {
   model.familyCallFormOpen = false;
   model.emsCall = { status: "none", time: null, reason: null };
   model.emsCallFormOpen = false;
-  model.state = STATE.START;
-  render();
+  // reset state and navigate to START using setState so navigation scroll-to-top is applied
+  setState(STATE.START);
 }
 
 function anyYes(obj) {
@@ -401,6 +401,8 @@ function toast(msg) {
 function setState(next) {
   model.state = next;
   render();
+  // After changing screens, ensure the view starts at the top so newly-rendered screens are visible from the top
+  try { if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') window.scrollTo(0, 0); } catch (e) { /* ignore */ }
 }
 
 function startSixQuestion(nextState) {
