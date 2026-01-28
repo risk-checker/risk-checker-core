@@ -9,5 +9,12 @@
 
 <details>
 	<summary>Internal keywords (for search)</summary>
-	red flag / red-flag / レッドフラッグ / triage / night shift / group home
+	red flag / red-flag / レッドフラッグ / triage
+	night shift / 夜勤 / 夜間対応
+	group home / グループホーム / 障害者グループホーム
+	夜勤 判断 / 夜間 判断 迷う
+	救急車 呼ぶ基準 / 119 判断
+	夜間 見守り / 経過観察 30分 / 経過観察 60分
+	拒薬 夜間 / 服薬拒否 対応
+	施設 夜間 マニュアル / 夜間対応 記録
 </details>
