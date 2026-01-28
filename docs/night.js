@@ -16,6 +16,8 @@ const model = {
   observationStartAt: null,
   familyCall: { status: "none", time: null },
   familyCallFormOpen: false,
+  emsCall: { status: "none", time: null, reason: null },
+  emsCallFormOpen: false,
 };
 
 const $view = () => document.getElementById("view");
@@ -201,6 +203,8 @@ function resetAll() {
   model.observationStartAt = null;
   model.familyCall = { status: "none", time: null };
   model.familyCallFormOpen = false;
+  model.emsCall = { status: "none", time: null, reason: null };
+  model.emsCallFormOpen = false;
   model.state = STATE.START;
   render();
 }
@@ -267,6 +271,22 @@ function buildRecordText(extraTitle) {
   t.push(tl ? tl : "（記録なし）");
   t.push("");
 
+  if (model.state === STATE.RESULT_CALL && model.emsCall.status !== "none" && model.emsCall.time) {
+    const reasonLabels = {
+      already_called: "すでに119通報済み",
+      no_connection: "つながらなかった",
+      other_route: "別ルートで対応（救急相談/医師指示 等）",
+    };
+    t.push("【119通報（事実ログ）】");
+    if (model.emsCall.status === "auto") {
+      t.push(`・${model.emsCall.time} 119通報：実施（自動記録）`);
+    } else if (model.emsCall.status === "exception") {
+      const reason = reasonLabels[model.emsCall.reason] || "（理由未選択）";
+      t.push(`・${model.emsCall.time} 119通報：未実施（例外）／理由：${reason}`);
+    }
+    t.push("");
+  }
+
   if (model.familyCall.status !== "none" && model.familyCall.time) {
     const statusText = model.familyCall.status === "connected" ? "つながった" : "つながらなかった";
     t.push("【家族連絡（事実ログ）】");
@@ -292,6 +312,12 @@ function buildRecordText(extraTitle) {
   if (model.state === STATE.RESULT_CALL) {
     const s = yesQuestionSummary();
     t.push(`救急車（119）／Yesあり：${s.short}`);
+    const emsFacts = externalFactStatements("externalForEMS", 3);
+    if (emsFacts.length) {
+      t.push("");
+      t.push("【救急隊へ伝達（要点）】");
+      emsFacts.forEach(line => t.push(`・${line}`));
+    }
   } else if (model.state === STATE.OBSERVE_30) {
     t.push("様子を見る（30分後に再チェック）");
   } else if (model.state === STATE.OBSERVE_60) {
@@ -660,6 +686,12 @@ function screenQ6(showMedication = false) {
     const hasYes = anyYes(model.answers);
     if (hasYes) {
       recordTimeline(`結果：救急車（${summary.short}）`);
+      if (model.emsCall.status === "none") {
+        model.emsCall.status = "auto";
+        model.emsCall.time = nowText();
+        model.emsCall.reason = null;
+        recordTimeline("119通報：実施（救急車表示に基づく）", model.emsCall.time);
+      }
       setState(STATE.RESULT_CALL);
     } else {
       const nextLabel = model.nextIfAllNo === STATE.OBSERVE_30 ? "再確認30分"
@@ -746,6 +778,77 @@ function screenCall() {
   actionRow.appendChild(btn("最初からやり直す", () => resetAll()));
   wrap.appendChild(actionRow);
 
+  const emsCallCard = div("card emergency-call-log-card");
+  emsCallCard.appendChild(h2("119通報（記録）"));
+  emsCallCard.appendChild(div("muted", "救急車表示の場合、原則 119 通報は実施されます（自動記録）。"));
+
+  const emsStatusText = div("small muted");
+  const emsReasonLabels = {
+    already_called: "すでに119通報済み",
+    no_connection: "つながらなかった",
+    other_route: "別ルートで対応（救急相談/医師指示 等）",
+  };
+  if (model.emsCall.status === "auto" && model.emsCall.time) {
+    emsStatusText.textContent = `${model.emsCall.time} 119通報：実施（自動記録）`;
+  } else if (model.emsCall.status === "exception" && model.emsCall.time) {
+    const reasonLabel = emsReasonLabels[model.emsCall.reason] || "（理由未選択）";
+    emsStatusText.textContent = `${model.emsCall.time} 119通報：未実施（例外記録）／理由：${reasonLabel}`;
+  } else {
+    emsStatusText.textContent = "未記録";
+  }
+  emsCallCard.appendChild(emsStatusText);
+
+  const exceptionRow = div("row");
+  exceptionRow.appendChild(btn("例外を記録する", () => {
+    model.emsCallFormOpen = true;
+    render();
+  }));
+  emsCallCard.appendChild(exceptionRow);
+
+  if (model.emsCallFormOpen) {
+    const options = [
+      { id: "already_called", label: "すでに119通報済み（誰が通報したかは不問）" },
+      { id: "no_connection", label: "つながらなかった" },
+      { id: "other_route", label: "別ルートで対応（例：救急相談/医師指示 等）" },
+    ];
+    options.forEach(({ id, label }) => {
+      const row = div("row");
+      const radio = document.createElement("input");
+      radio.type = "radio";
+      radio.name = "ems-exception";
+      radio.value = id;
+      radio.checked = model.emsCall.reason === id;
+      radio.onchange = () => {
+        model.emsCall.reason = id;
+      };
+      const text = document.createElement("div");
+      text.textContent = label;
+      row.appendChild(radio);
+      row.appendChild(text);
+      emsCallCard.appendChild(row);
+    });
+
+    const actionRow = div("row");
+    const saveBtn = btn("例外として保存", () => {
+      if (!model.emsCall.reason) return;
+      model.emsCall.status = "exception";
+      model.emsCall.time = nowText();
+      const reasonLabel = emsReasonLabels[model.emsCall.reason];
+      recordTimeline(`119通報：未実施（例外）／理由：${reasonLabel}`, model.emsCall.time);
+      model.emsCallFormOpen = false;
+      render();
+    }, "primary big");
+    saveBtn.disabled = !model.emsCall.reason;
+    actionRow.appendChild(saveBtn);
+    actionRow.appendChild(btn("閉じる", () => {
+      model.emsCallFormOpen = false;
+      render();
+    }));
+    emsCallCard.appendChild(actionRow);
+  }
+
+  wrap.appendChild(emsCallCard);
+
   const setFamilyCallStatus = (status) => {
     model.familyCall.status = status;
     model.familyCall.time = nowText();
@@ -763,24 +866,18 @@ function screenCall() {
     const statusText = model.familyCall.status === "connected" ? "つながった" : "つながらなかった";
     callStatusText.textContent = `${model.familyCall.time} 家族へ架電：${statusText}`;
   }
+  const logRow = div("row");
+  logRow.appendChild(btn("つながった", () => setFamilyCallStatus("connected"), "primary"));
+  logRow.appendChild(btn("つながらなかった", () => setFamilyCallStatus("no_answer")));
+  familyCallCard.appendChild(logRow);
   familyCallCard.appendChild(callStatusText);
-  const familyCallRow = div("row");
-  familyCallRow.appendChild(btn("家族へ架電（記録）", () => {
-    model.familyCallFormOpen = true;
-    render();
-  }));
-  familyCallCard.appendChild(familyCallRow);
-  if (model.familyCallFormOpen) {
-    const logRow = div("row");
-    logRow.appendChild(btn("つながった", () => setFamilyCallStatus("connected"), "primary"));
-    logRow.appendChild(btn("つながらなかった", () => setFamilyCallStatus("no_answer")));
-    familyCallCard.appendChild(logRow);
-  }
   wrap.appendChild(familyCallCard);
 
   const familyFacts = externalFactStatements("externalForFamily", 2);
   while (familyFacts.length < 2) familyFacts.push("＿＿＿＿＿＿＿＿＿＿＿＿");
-  const familyCopyText = [
+
+  // 読み上げる本文（※や内部注釈は入れない）
+  const familyReadAloudText = [
     "【ご連絡（事実通知）】",
     `施設の ${facilityValue(facility.name)} です。`,
     "",
@@ -788,28 +885,56 @@ function screenCall() {
     "医療機関での確認が必要と判断され、救急搬送となりました。",
     "",
     "確認できている事実としては、次の点があります。",
-    "（読み上げます）",
     `・${familyFacts[0]}`,
     `・${familyFacts[1]}`,
-    "",
-    "※これは診断や原因の判断ではなく、その時点で確認できていた体の状態（事実）です。",
     "",
     "現在は病院へ引き継がれており、今後の対応や説明については医療機関の判断により行われます。",
     "",
     "現時点で施設からお伝えできる内容は以上です。"
   ].join("\n");
 
+  // コピペ用（任意）：読み上げ本文と同一（※は別表示にする）
+  const familyCopyText = familyReadAloudText;
+
   const familySection = document.createElement("section");
   familySection.className = "card family-card";
   familySection.appendChild(h2("家族へ伝える（搬送先が確定した後／事実のみ）"));
-  familySection.appendChild(div("muted", "搬送先が確定した後、普段との違いとして確認できている事実だけを短く伝えます。診断・原因・評価は含みません。"));
-  const familyCopy = document.createElement("pre");
-  familyCopy.className = "copybox";
-  familyCopy.textContent = familyCopyText;
-  familySection.appendChild(familyCopy);
-  const familyBtnRow = div("row");
-  familyBtnRow.appendChild(btn("コピーする", () => { copyText(familyCopyText); toast("コピーしました"); }, "primary"));
-  familySection.appendChild(familyBtnRow);
+  familySection.appendChild(div(
+    "muted",
+    "上から順に、そのまま読み上げてください。"
+  ));
+
+  // 読み上げ用：見える範囲に収めて、上から読むだけ
+  familySection.appendChild(div("result", familyReadAloudText));
+
+  // ※は読まない（夜勤の安全装置として表示のみ）
+  const familyNote = div(
+    "small muted",
+    "読み上げ不要（画面用メモ）\n・これは診断や原因の判断ではなく、その時点で確認できていた体の状態（事実）です。\n・搬送後の対応や説明は医療機関の判断により行われます。"
+  );
+  familySection.appendChild(familyNote);
+
+  // コピペは任意：緊急時にUIをガチャつかせない
+  if (model.familyCall.status !== "none") {
+    const familyCopyDetails = document.createElement("details");
+    familyCopyDetails.className = "guide";
+    const familyCopySummary = document.createElement("summary");
+    familyCopySummary.textContent = "コピー（任意）";
+    familyCopyDetails.appendChild(familyCopySummary);
+
+    const familyCopy = document.createElement("pre");
+    familyCopy.className = "copybox";
+    familyCopy.textContent = familyCopyText;
+    familyCopyDetails.appendChild(familyCopy);
+
+    const familyBtnRow = div("row");
+    familyBtnRow.appendChild(btn("コピーする", () => { copyText(familyCopyText); toast("コピーしました"); }, "primary"));
+    familyCopyDetails.appendChild(familyBtnRow);
+
+    familySection.appendChild(familyCopyDetails);
+  } else {
+    familySection.appendChild(div("small muted", "家族へ架電（記録）の入力後にコピーが表示されます。"));
+  }
   wrap.appendChild(familySection);
 
   appendRecordLogCard(wrap, "（救急車表示）");
