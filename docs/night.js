@@ -596,6 +596,15 @@ function screenQ6(showMedication = false) {
   head.appendChild(h2("夜間リスク確認（6問）"));
   head.appendChild(div("muted", "今の状態を、そのまま答えてください"));
 
+  // Q0: pre-check annotation (do NOT request input here)
+  // Short guard-rail note intended to reduce extra decisions by night staff.
+  const q0note = div("note", 
+    "※ 過去と同じ訴えで、今回も「いつもと違う点」が見当たらない場合は、\n" +
+    "6問を省略して、今は様子を見る\n" +
+    "※ 迷う・分からない場合は、6問へ"
+  );
+  head.appendChild(q0note);
+
   const details = document.createElement("details");
   details.className = "guide";
   const summary = document.createElement("summary");
