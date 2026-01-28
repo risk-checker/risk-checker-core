@@ -97,6 +97,36 @@ html[data-theme="dark"] {
   #font-toggle { display:flex; gap:8px; justify-content:flex-end; align-items:center; }
 }
 
+/* Make theme/font toggle buttons compact so they don't push content down on narrow screens */
+#theme-toggle, #font-toggle {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+@media (max-width: 720px) {
+  /* compact the toggle buttons on small devices */
+  #theme-toggle button, #font-toggle button {
+    padding: 6px 10px;
+    font-size: 14px;
+    border-radius: 8px;
+    min-height: 36px;
+    width: auto;
+  }
+  /* keep toggle group horizontal to save vertical space */
+  #theme-toggle, #font-toggle { flex-direction: row; }
+  /* ensure the wrapper (the right-side div) doesn't overflow */
+  .box > .row > div:last-child { display:flex; gap:8px; align-items:center; }
+}
+
+@media (max-width: 420px) {
+  #theme-toggle button, #font-toggle button {
+    padding: 6px 8px;
+    font-size: 13px;
+    min-height: 34px;
+  }
+}
+
 body {
   font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
   margin: 24px;
