@@ -127,6 +127,32 @@ html[data-theme="dark"] {
   }
 }
 
+/* Further compact header and toggles on very small screens */
+@media (max-width: 480px) {
+  /* reduce title size so header takes less vertical space */
+  .box > .row:first-child h1 { font-size: 18px; margin-bottom: 0; }
+
+  /* remove extra top margin inserted inline for #font-toggle */
+  #font-toggle { margin-top: 0 !important; }
+
+  /* hide explicit labels to save space (icons/short buttons remain) */
+  #theme-toggle > span, #font-toggle > span { display: none; }
+
+  /* make toggle buttons very compact */
+  #theme-toggle button, #font-toggle button {
+    padding: 6px 8px;
+    font-size: 13px;
+    border-radius: 8px;
+    min-height: 34px;
+  }
+
+  /* ensure the header right-side groups align horizontally and don't wrap */
+  .box > .row > div:last-child { display:flex; gap:6px; align-items:center; flex-wrap: nowrap; }
+
+  /* slightly reduce box padding on very small screens */
+  .box { padding-top: 10px; padding-bottom: 10px; }
+}
+
 body {
   font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
   margin: 24px;
