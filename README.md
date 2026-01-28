@@ -1,38 +1,13 @@
-# Risk Checker Core
+# night checker (WIP)
 
-This repository contains the core UI and logic for the Risk Checker project.
+- 夜間の“事実確認”チェックです（診断・評価はしません）
+- 6問 → 1つでも該当 → 119
+- 全て該当なし → 30分 → 60分で同じ6問を再確認
+- 寝ているか不明のときは「睡眠チェック（補助）」へ（救急車判定はしない）
+- 施設情報（名前/住所/電話）は端末ローカルのみに保存（GitHubには保存されません）
+- GitHub Pages: `/docs/night.html`
 
-## What this is
-
-- A decision-support tool
-- NOT a diagnostic or judgment system
-- Designed to detect red flags and return final decisions to humans
-
-## Included tools
-
-- Night Checker (WIP)
-
-## Running Night Checker locally
-
-Night Checker relies on ES modules, so open a browser via HTTP instead of directly opening the file. From the `docs` folder:
-
-```
-cd /Users/aramakimasato/projects/risk-checker-core/docs
-python3 -m http.server 8000
-```
-
-Then visit `http://localhost:8000/night.html`. If you serve from the repository root, the same content is available at `http://localhost:8000/docs/night.html`.
-
-## Principles
-
-This project follows strict design principles:
-
-- No diagnosis
-- No evaluation
-- No final judgment
-- Yes/No fact confirmation only
-
-See:
-
-- ARCHITECTURE.md
-- PRINCIPLES.md
+<details>
+	<summary>Internal keywords (for search)</summary>
+	red flag / red-flag / レッドフラッグ / triage / night shift / group home
+</details>
