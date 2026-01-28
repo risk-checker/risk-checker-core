@@ -291,6 +291,11 @@ function buildRecordText(extraTitle) {
     const statusText = model.familyCall.status === "connected" ? "つながった" : "つながらなかった";
     t.push("【家族連絡（事実ログ）】");
     t.push(`・${model.familyCall.time} 家族へ架電：${statusText}`);
+    // If the family call was successful, record the standard, non-editable transmission scope
+    if (model.familyCall.status === "connected") {
+      t.push("・伝達内容：事実のみ（体の状態／救急搬送の実施）");
+      t.push("・評価・予測・今後方針の説明：なし");
+    }
     t.push("");
   }
 
