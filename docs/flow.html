@@ -20,6 +20,18 @@
       <h1>Night checker — フローチャート</h1>
       <p>以下は night checker の主要フローです。ページが表示されない場合は、しばらく待ってから再読み込みしてください（Pages のビルド反映に数分かかる場合があります）。</p>
 
+      <section style="background:#0d1114;border-radius:8px;padding:12px;margin:12px 0;border:1px solid rgba(255,255,255,0.04);">
+        <h2 style="margin:0 0 8px 0;font-size:18px;">法務向け要約（簡潔）</h2>
+        <p style="margin:0 0 8px 0;line-height:1.45;color:#dfeffd;">弁護士による速やかな確認用に、設計と責任範囲を平易にまとめています。必要に応じてこの文言を印刷・送付してください。</p>
+        <ul style="margin:0 0 0 18px;padding:0;color:#dfeffd;">
+          <li>目的：端末ローカルで動作する事実確認補助ツールです。診断や医療的助言は行いません。</li>
+          <li>データ処理：記録は端末内のタイムライン（事象＋時刻）と構造化された通話/119 の事実のみを保持します。自由記述は恒久保存しません。</li>
+          <li>通信：自動で外部へ送信・同期は行いません。記録の共有は利用者が手動でコピーして行います。</li>
+          <li>責任範囲：本ツールは補助ツールです。最終的な判断・対応責任は現場の担当者（利用者）にあります。</li>
+          <li>運用ルール：画面や文言を更新したら `sw.js` のキャッシュバージョンを更新し、配布端末へ最新版を周知してください。</li>
+        </ul>
+      </section>
+
       <div class="mermaid">
 flowchart TD
   %% Nodes: high-level states and actions
