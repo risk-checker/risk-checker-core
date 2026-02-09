@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Night checker - Flow</title>
+    <meta name="theme-color" content="#0b0c10" />
+    <!-- Mermaid CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({ startOnLoad: true });</script>
+    <style>
+      body { background:#0b0c10; color: #fff; font-family: system-ui, -apple-system, "Helvetica Neue", Arial; padding: 24px; }
+      .card { background: #0f1115; border-radius: 8px; padding: 18px; max-width: 960px; margin: 0 auto; box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
+      .mermaid { color: #fff; }
+      a { color: #9fd3ff }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Night checker — フローチャート</h1>
+      <p>以下は night checker の主要フローです。ページが表示されない場合は、しばらく待ってから再読み込みしてください（Pages のビルド反映に数分かかる場合があります）。</p>
+
+      <div class="mermaid">
+flowchart TD
+  %% Nodes: high-level states and actions
+  BOOT(["起動 (bootNight)"])
+  START(["START / 施設情報入力"])
+  Q6(["Q6: 夜間リスク確認（6問）\n(Q0は注記: 今は様子を見る)"])
+  RESULT_CALL(["RESULT_CALL / 呼び出し画面\n(EMS / 家族)"])
+  OBSERVE30(["OBSERVE 30分待機"])
+  OBSERVE60(["OBSERVE 60分待機"])
+  SLEEP(["SLEEP / 睡眠記録"])
+  HANDOFF(["HANDOFF / 引継ぎ"])
+  RECORD(["記録作成 (buildRecordText)\n- timeline を列挙\n- EMS / family facts を追加\n(事実のみ)"])
+  RESET(["リセット (resetAll)"])
+  ERROR(["エラー / キャッシュ等"])
+
+  %% Actions / side-effects
+  RECORD_TIMELINE(["recordTimeline(label, time)"])
+  EMS_AUTO(["EMS 自動記録 (119)\n- 発生時に自動で記録\n- 例外は手動で記録（固定理由のみ）"])
+  FAMILY_CALL(["家族通話\n1タップで記録: つながった/つながらない\n- つながった時は記録に固定伝達文を追加\n- コピー領域は通話記録後に有効"])
+  SW_REGISTER(["ServiceWorker 登録\n(manifest + sw.js)"])
+
+  %% Boot / registration
+  BOOT -->|初期化: load model, render| START
+  BOOT --> SW_REGISTER
+
+  %% Main flow
+  START --> Q6
+  Q6 -->|危険あり| RESULT_CALL
+  Q6 -->|異常なし| OBSERVE30
+  RESULT_CALL -->|救急判定（緊急）| EMS_AUTO
+  RESULT_CALL --> FAMILY_CALL
+
+  %% OBSERVE flows
+  OBSERVE30 -->|30分経過| OBSERVE60
+  OBSERVE30 -->|本人拒否で6問不可ボタン| RECORD_TIMELINE & OBSERVE60
+  OBSERVE60 -->|60分経過| SLEEP
+  OBSERVE60 -->|本人拒否で6問不可ボタン| RECORD_TIMELINE & SLEEP
+
+  %% timeline side-effects
+  EMS_AUTO --> RECORD_TIMELINE
+  FAMILY_CALL --> RECORD_TIMELINE
+
+  %% record generation and handoff
+  SLEEP --> HANDOFF
+  HANDOFF --> RECORD
+  RESULT_CALL --> RECORD
+
+  %% Reset and errors
+  RECORD --> RESET
+  RESET --> START
+  SW_REGISTER -->|登録失敗| ERROR
+  ERROR --> BOOT
+
+  %% explicit link labels for clarity
+  click RECORD href "javascript:void(0)" "記録作成は UI 上の「記録用テキストをコピー」ボタンで実行"
+      </div>
+    </div>
+  </body>
+</html>
