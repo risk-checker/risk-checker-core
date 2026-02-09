@@ -35,23 +35,23 @@
       <div class="mermaid">
 flowchart TD
   %% Nodes: high-level states and actions
-  BOOT(["起動 (bootNight)"])
-  START(["START / 施設情報入力"])
-  Q6(["Q6: 夜間リスク確認（6問）\n(Q0は注記: 今は様子を見る)"])
-  RESULT_CALL(["RESULT_CALL / 呼び出し画面\n(EMS / 家族)"])
-  OBSERVE30(["OBSERVE 30分待機"])
-  OBSERVE60(["OBSERVE 60分待機"])
-  SLEEP(["SLEEP / 睡眠記録"])
-  HANDOFF(["HANDOFF / 引継ぎ"])
-  RECORD(["記録作成 (buildRecordText)\n- timeline を列挙\n- EMS / family facts を追加\n(事実のみ)"])
-  RESET(["リセット (resetAll)"])
-  ERROR(["エラー / キャッシュ等"])
+  BOOT(["起動：画面表示と初期設定"])
+  START(["最初の設定：施設名など（端末内保存）"])
+  Q6(["事実確認（6つの質問）\n※質問は『今は様子を見る』か『要対応か』を整理するための確認"])
+  RESULT_CALL(["連絡・対応の整理画面（事実の記録）\n・救急（119）\n・家族への連絡"])
+  OBSERVE30(["様子を見る（30分）"])
+  OBSERVE60(["様子を見る（60分）"])
+  SLEEP(["睡眠の状況を記録（事実）"])
+  HANDOFF(["引継ぎ（コピー用の記録文を作る）"])
+  RECORD(["記録文を生成（コピー前提）\n・時系列（いつ何が起きたか）\n・119/家族連絡の事実\n※評価や断定は書かない"])
+  RESET(["やり直し（端末内の入力をクリア）"])
+  ERROR(["エラー：キャッシュ/読み込み失敗等"])
 
   %% Actions / side-effects
-  RECORD_TIMELINE(["recordTimeline(label, time)"])
-  EMS_AUTO(["EMS 自動記録 (119)\n- 発生時に自動で記録\n- 例外は手動で記録（固定理由のみ）"])
-  FAMILY_CALL(["家族通話\n1タップで記録: つながった/つながらない\n- つながった時は記録に固定伝達文を追加\n- コピー領域は通話記録後に有効"])
-  SW_REGISTER(["ServiceWorker 登録\n(manifest + sw.js)"])
+  RECORD_TIMELINE(["時系列に記録：出来事＋時刻（端末内）"])
+  EMS_AUTO(["救急（119）の記録\n・緊急と判断した場合は自動で『119対応』を事実として記録\n・例外的な手動追加は固定の理由のみ（自由入力なし）"])
+  FAMILY_CALL(["家族への連絡の記録\n・ワンタップで『つながった／つながらなかった』を記録\n・つながった場合は、決められた伝達文（事実）を記録に含める\n・自由記述は恒久保存しない"])
+  SW_REGISTER(["オフライン対応（PWA）\n・一度開いた端末なら電波がなくても起動できるようにする\n・サーバ同期はしない"])
 
   %% Boot / registration
   BOOT -->|初期化: load model, render| START
