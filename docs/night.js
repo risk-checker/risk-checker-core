@@ -7,6 +7,15 @@ const model = {
   answers: Object.fromEntries(Q6.map(q => [q.id, null])),   // null / true / false
   sleep: Object.fromEntries(SLEEP.map(q => [q.id, null])), // null / true / false
   medicationEvents: Object.fromEntries(MEDICATION_EVENTS.map(m => [m.id, false])),
+  medMiniLog: {
+    time: "",
+    reaction: "",
+    vomit: null, // yes | no | unknown
+    fall: null,  // yes | no | unknown
+    breathing: null, // yes | no | unknown
+    consciousness: null, // yes | no | unknown
+    noForce: false,
+  },
   lastRunAt: null,   // 表示用（直近の6問実施時刻）
   firstRunAt: null,  // 初回6問を実施した時刻（30分/60分の基準）
   recheckRound: 0,   // 0=初回,1=30分後,2=60分後
@@ -194,6 +203,15 @@ function resetAll() {
   for (const k of Object.keys(model.answers)) model.answers[k] = null;
   for (const k of Object.keys(model.sleep)) model.sleep[k] = null;
   for (const k of Object.keys(model.medicationEvents)) model.medicationEvents[k] = false;
+  model.medMiniLog = {
+    time: "",
+    reaction: "",
+    vomit: null,
+    fall: null,
+    breathing: null,
+    consciousness: null,
+    noForce: false,
+  };
   model.lastRunAt = null;
   model.firstRunAt = null;
   model.recheckRound = 0;
@@ -221,6 +239,43 @@ function selectedMedicationLabels() {
   return MEDICATION_EVENTS.filter(item => model.medicationEvents[item.id]).map(item => item.label);
 }
 
+function resetMedMiniLog() {
+  model.medMiniLog = {
+    time: "",
+    reaction: "",
+    vomit: null,
+    fall: null,
+    breathing: null,
+    consciousness: null,
+    noForce: false,
+  };
+}
+
+function isMedMiniComplete() {
+  const m = model.medMiniLog;
+  return !!(m.time && m.time.trim())
+    && !!(m.reaction && m.reaction.trim())
+    && m.vomit !== null
+    && m.fall !== null
+    && m.breathing !== null
+    && m.consciousness !== null
+    && m.noForce === true;
+}
+
+function isMedMiniRedFlag() {
+  const m = model.medMiniLog;
+  const hasMedRisk = !!(model.medicationEvents.m1 || model.medicationEvents.m2 || model.medicationEvents.m3);
+  const breathingRisk = m.breathing === "no" || m.breathing === "unknown";
+  const consciousnessRisk = m.consciousness === "no" || m.consciousness === "unknown";
+  const vomitRisk = m.vomit === "yes";
+  const fallRisk = m.fall === "yes";
+  return hasMedRisk || breathingRisk || consciousnessRisk || vomitRisk || fallRisk;
+}
+
+function hasTimelineLabel(prefix) {
+  return model.timeline.some(e => e.label && e.label.startsWith(prefix));
+}
+
 function formatMedicationLogText() {
   const start = model.observationStartAt || "（未記録）";
   const lines = [
@@ -234,6 +289,27 @@ function formatMedicationLogText() {
     lines.push("・（なし）");
   }
   return lines.join("\n");
+}
+
+function formatMedMiniLogLines() {
+  const m = model.medMiniLog;
+  if (!m || (!m.time && !m.reaction && m.vomit === null && m.fall === null && m.breathing === null && m.consciousness === null)) {
+    return ["（未記録）"];
+  }
+  const label = (v, yes, no, unknown) => {
+    if (v === "yes") return yes;
+    if (v === "no") return no;
+    return unknown;
+  };
+  return [
+    `発生時刻：${m.time || "（未記録）"}`,
+    `本人の反応（短文）：${m.reaction || "（未記録）"}`,
+    `嘔吐：${label(m.vomit, "あり", "なし", "不明")}`,
+    `ふらつき・転倒：${label(m.fall, "あり", "なし", "不明")}`,
+    `呼吸は普段と比べて問題ないと言えるか：${label(m.breathing, "はい", "いいえ", "不明")}`,
+    `意識・反応は普段と同じと言えるか：${label(m.consciousness, "はい", "いいえ", "不明")}`,
+    `強制はしていない：${m.noForce ? "はい" : "未チェック"}`,
+  ];
 }
 
 function q6AnswerLines() {
@@ -305,12 +381,19 @@ function buildRecordText(extraTitle) {
       const m = MEDICATION_EVENTS.find(x => x.id === id);
       return m ? m.label : id;
     });
-  t.push("【薬の出来事（チェックがある場合）】");
+  t.push("【薬の出来事】");
   t.push(meds.length ? meds.map(x => `・${x}`).join("\n") : "（なし）");
+  t.push("");
+  t.push("【薬イベント：ミニ観察ログ】");
+  t.push(formatMedMiniLogLines().join("\n"));
   t.push("");
 
   t.push("【6問（最新）】");
-  t.push(q6AnswerLines());
+  if (Object.values(model.answers).every(v => v === null)) {
+    t.push("（未実施）");
+  } else {
+    t.push(q6AnswerLines());
+  }
   t.push("");
 
   t.push("【現在の表示】");
@@ -333,6 +416,10 @@ function buildRecordText(extraTitle) {
     t.push("睡眠チェック（補助）");
   } else if (model.state === STATE.Q6) {
     t.push("6問入力中");
+  } else if (model.state === STATE.MED_EVENT) {
+    t.push("薬イベントの事実チェック中");
+  } else if (model.state === STATE.MED_MINI) {
+    t.push("薬イベント：ミニ観察ログ入力中");
   } else {
     t.push("開始前");
   }
@@ -410,15 +497,21 @@ function setState(next) {
   try { if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') window.scrollTo(0, 0); } catch (e) { /* ignore */ }
 }
 
-function startSixQuestion(nextState) {
+function startSixQuestion(nextState, options = {}) {
   const now = nowText();
   model.lastRunAt = now;
   model.firstRunAt = now;
-  model.observationStartAt = now;
   model.recheckRound = 0;
   model.nextIfAllNo = STATE.OBSERVE_30;
+
+  const obsStart = options.observationStartAt || model.observationStartAt || now;
+  model.observationStartAt = obsStart;
+
   recordTimeline("初回6問実施時刻", now);
-  recordTimeline("観察開始時刻", now);
+  if (!hasTimelineLabel("観察開始時刻")) {
+    recordTimeline("観察開始時刻", obsStart);
+  }
+
   setState(nextState);
 }
 
@@ -430,6 +523,14 @@ function render() {
 
   if (model.state === STATE.START) {
     v.appendChild(screenStart());
+    return;
+  }
+  if (model.state === STATE.MED_EVENT) {
+    v.appendChild(screenMedicationEvent());
+    return;
+  }
+  if (model.state === STATE.MED_MINI) {
+    v.appendChild(screenMedicationMini());
     return;
   }
   if (model.state === STATE.Q6_MED) {
@@ -518,7 +619,8 @@ function screenStart() {
   const choiceMed = div("choice");
   choiceMed.appendChild(btn("薬の出来事（チェック）", () => {
     Object.keys(model.medicationEvents).forEach(k => model.medicationEvents[k] = false);
-    startSixQuestion(STATE.Q6_MED);
+    resetMedMiniLog();
+    setState(STATE.MED_EVENT);
   }, "big"));
   choiceMed.appendChild(div("muted startup-button-note", "※迷ったら押す（薬が不明/取り違え/量が多い）"));
   wrap.appendChild(choiceMed);
@@ -545,6 +647,199 @@ function screenStart() {
   f.appendChild(fr);
 
   wrap.appendChild(f);
+
+  return wrap;
+}
+
+function screenMedicationEvent() {
+  const wrap = document.createElement("div");
+  const card = div("card");
+  card.appendChild(h2("薬の出来事（事実だけチェック）"));
+  card.appendChild(div("muted", "該当する事実のみチェックしてください（複数選択可）。判断や評価は行いません。"));
+
+  MEDICATION_EVENTS.forEach(m => {
+    card.appendChild(
+      checkboxRow(m.label, model.medicationEvents[m.id], (v) => {
+        model.medicationEvents[m.id] = v;
+      })
+    );
+  });
+
+  const selected = selectedMedicationLabels();
+  const info = div("small muted", selected.length ? "選択済み" : "※ 1つ以上選択してください");
+  card.appendChild(info);
+
+  const row = div("row");
+  const nextBtn = btn("次へ（ミニ観察ログ）", () => {
+    const picked = selectedMedicationLabels();
+    model.timeline = model.timeline.filter(entry => entry.label !== "薬の出来事");
+    recordTimeline("薬の出来事", picked.length ? picked.join(" / ") : "（未選択）");
+    if (!model.medMiniLog.time) model.medMiniLog.time = nowText();
+    setState(STATE.MED_MINI);
+  }, "primary big");
+  nextBtn.disabled = selected.length === 0;
+  row.appendChild(nextBtn);
+  row.appendChild(btn("チェックをクリア", () => {
+    Object.keys(model.medicationEvents).forEach(k => model.medicationEvents[k] = false);
+    render();
+  }));
+  row.appendChild(btn("戻る", () => setState(STATE.START)));
+  card.appendChild(row);
+  wrap.appendChild(card);
+  return wrap;
+}
+
+function triChoiceCard(title, labels, value, onChange) {
+  const card = div("card");
+  card.appendChild(h2(title));
+  const r = div("row ans-row");
+  const bYes = btn(labels.yes, () => { onChange("yes"); render(); }, "ansbtn");
+  const bNo = btn(labels.no, () => { onChange("no"); render(); }, "ansbtn");
+  const bUn = btn(labels.unknown, () => { onChange("unknown"); render(); }, "ansbtn");
+
+  if (value === "yes") bYes.classList.add("active");
+  if (value === "no") bNo.classList.add("active");
+  if (value === "unknown") bUn.classList.add("active");
+
+  r.appendChild(bYes);
+  r.appendChild(bNo);
+  r.appendChild(bUn);
+  card.appendChild(r);
+  return card;
+}
+
+function screenMedicationMini() {
+  const wrap = document.createElement("div");
+  const card = div("card");
+  card.appendChild(h2("ミニ観察ログ（必須）"));
+  card.appendChild(div(
+    "note",
+    "薬イベント時は必ずこの短い観察ログを残します。判断はせず、事実だけを記録してください。"
+  ));
+
+  let saveBtnRef = null;
+  const updateSaveDisabled = () => {
+    if (saveBtnRef) saveBtnRef.disabled = !isMedMiniComplete();
+  };
+
+  const timeRow = div("row");
+  const timeLabel = div("muted", "発生時刻（推定可）");
+  timeLabel.style.minWidth = "160px";
+  const timeInput = document.createElement("input");
+  timeInput.type = "text";
+  timeInput.value = model.medMiniLog.time;
+  timeInput.style.flex = "1";
+  timeInput.style.padding = "12px";
+  timeInput.placeholder = "例：2026/02/10 21:30（推定可）";
+  timeInput.oninput = () => {
+    model.medMiniLog.time = timeInput.value;
+    updateSaveDisabled();
+  };
+  timeRow.appendChild(timeLabel);
+  timeRow.appendChild(timeInput);
+  card.appendChild(timeRow);
+
+  const reactionRow = div("row");
+  const reactionLabel = div("muted", "本人の反応（短文）");
+  reactionLabel.style.minWidth = "160px";
+  const reactionInput = document.createElement("input");
+  reactionInput.type = "text";
+  reactionInput.value = model.medMiniLog.reaction;
+  reactionInput.style.flex = "1";
+  reactionInput.style.padding = "12px";
+  reactionInput.placeholder = "例：会話はできるが不安が強い";
+  reactionInput.oninput = () => {
+    model.medMiniLog.reaction = reactionInput.value;
+    updateSaveDisabled();
+  };
+  reactionRow.appendChild(reactionLabel);
+  reactionRow.appendChild(reactionInput);
+  card.appendChild(reactionRow);
+
+  wrap.appendChild(card);
+
+  wrap.appendChild(triChoiceCard(
+    "嘔吐はありましたか？",
+    { yes: "あり", no: "なし", unknown: "不明" },
+    model.medMiniLog.vomit,
+    v => model.medMiniLog.vomit = v
+  ));
+
+  wrap.appendChild(triChoiceCard(
+    "ふらつき・転倒はありましたか？",
+    { yes: "あり", no: "なし", unknown: "不明" },
+    model.medMiniLog.fall,
+    v => model.medMiniLog.fall = v
+  ));
+
+  wrap.appendChild(triChoiceCard(
+    "呼吸は普段と比べて問題ないと言えますか？",
+    { yes: "はい", no: "いいえ", unknown: "不明" },
+    model.medMiniLog.breathing,
+    v => model.medMiniLog.breathing = v
+  ));
+
+  wrap.appendChild(triChoiceCard(
+    "意識・反応は普段と同じと言えますか？",
+    { yes: "はい", no: "いいえ", unknown: "不明" },
+    model.medMiniLog.consciousness,
+    v => model.medMiniLog.consciousness = v
+  ));
+
+  const forceCard = div("card");
+  forceCard.appendChild(h2("強制はしていない"));
+  const forceRow = div("row");
+  const forceCb = document.createElement("input");
+  forceCb.type = "checkbox";
+  forceCb.checked = model.medMiniLog.noForce;
+  forceCb.style.width = "20px";
+  forceCb.style.height = "20px";
+  forceCb.onchange = () => { model.medMiniLog.noForce = forceCb.checked; render(); };
+  const forceText = document.createElement("div");
+  forceText.textContent = "本人に無理やり飲ませたわけではない";
+  forceRow.appendChild(forceCb);
+  forceRow.appendChild(forceText);
+  forceCard.appendChild(forceRow);
+  wrap.appendChild(forceCard);
+
+  const action = div("card");
+  action.appendChild(h2("保存して次へ（自動分岐）"));
+  action.appendChild(div("muted", "不明が残る場合は安全側として6問へ進みます。"));
+
+  const row = div("row");
+  const saveBtn = btn("保存して次へ", () => {
+    if (!isMedMiniComplete()) return;
+
+    const eventTime = model.medMiniLog.time || nowText();
+    model.medMiniLog.time = eventTime;
+    model.observationStartAt = eventTime;
+
+    if (!hasTimelineLabel("観察開始時刻")) {
+      recordTimeline("観察開始時刻", eventTime);
+    }
+    recordTimeline("薬イベント：ミニ観察ログ保存", nowText());
+
+    // clear Q6 answers before branching
+    for (const k of Object.keys(model.answers)) model.answers[k] = null;
+
+    if (isMedMiniRedFlag()) {
+      startSixQuestion(STATE.Q6, { observationStartAt: eventTime });
+    } else {
+      model.firstRunAt = nowText();
+      model.lastRunAt = model.firstRunAt;
+      model.recheckRound = 0;
+      model.nextIfAllNo = STATE.OBSERVE_30;
+      recordTimeline("薬イベント：6問不要（経過観察へ）", model.firstRunAt);
+      setState(STATE.OBSERVE_30);
+    }
+  }, "primary big");
+  saveBtn.disabled = !isMedMiniComplete();
+  saveBtnRef = saveBtn;
+  row.appendChild(saveBtn);
+  row.appendChild(btn("前の画面へ", () => setState(STATE.MED_EVENT)));
+  row.appendChild(btn("最初からやり直す", () => resetAll()));
+  action.appendChild(row);
+  wrap.appendChild(action);
 
   return wrap;
 }
@@ -1002,11 +1297,11 @@ function screenObserve(mins, nextState) {
   card.appendChild(h2(stateTitle));
 
   // まず「次に何をするか」を最大優先で表示
-  const base = model.firstRunAt ?? "未記録";
+  const base = model.observationStartAt ?? model.firstRunAt ?? "未記録";
   const banner = div(
     "result observe state-banner",
     `次にすること：${mins}分たったら『6問を再チェック』\n` +
-      `（基準：初回6問 ${base} からの経過)`
+      `（基準：観察開始 ${base} からの経過)`
   );
   card.appendChild(banner);
 

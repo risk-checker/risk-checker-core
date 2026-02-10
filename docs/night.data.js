@@ -5,6 +5,8 @@ export const STATE = {
   START: "START",
   Q6: "Q6",
   Q6_MED: "Q6_MED",
+  MED_EVENT: "MED_EVENT",
+  MED_MINI: "MED_MINI",
   RESULT_CALL: "RESULT_CALL",
   OBSERVE_30: "OBSERVE_30",
   OBSERVE_60: "OBSERVE_60",
@@ -68,7 +70,7 @@ export const SLEEP = [
 // 薬の出来事（事実のみ）
 export const MEDICATION_EVENTS = [
   { id: "m1", label: "飲んだ内容が確認できない" },
-  { id: "m2", label: "本人の薬ではないものを飲んだ" },
-  { id: "m3", label: "決められた量より多く飲んだことが確認されている" },
+  { id: "m2", label: "本人の薬ではないものを飲んだ（誤薬）" },
+  { id: "m3", label: "決められた量より多く飲んだ（過量）" },
   { id: "m_refusal", label: "拒薬があった（飲めない／飲まない）" },
 ];
