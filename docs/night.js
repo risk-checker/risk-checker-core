@@ -14,7 +14,6 @@ const model = {
     fall: null,  // yes | no | unknown
     breathing: null, // yes | no | unknown
     consciousness: null, // yes | no | unknown
-    noForce: false,
   },
   lastRunAt: null,   // 表示用（直近の6問実施時刻）
   firstRunAt: null,  // 初回6問を実施した時刻（30分/60分の基準）
@@ -210,7 +209,6 @@ function resetAll() {
     fall: null,
     breathing: null,
     consciousness: null,
-    noForce: false,
   };
   model.lastRunAt = null;
   model.firstRunAt = null;
@@ -247,7 +245,6 @@ function resetMedMiniLog() {
     fall: null,
     breathing: null,
     consciousness: null,
-    noForce: false,
   };
 }
 
@@ -258,8 +255,7 @@ function isMedMiniComplete() {
     && m.vomit !== null
     && m.fall !== null
     && m.breathing !== null
-    && m.consciousness !== null
-    && m.noForce === true;
+    && m.consciousness !== null;
 }
 
 function isMedMiniRedFlag() {
@@ -308,7 +304,7 @@ function formatMedMiniLogLines() {
     `ふらつき・転倒：${label(m.fall, "あり", "なし", "不明")}`,
     `呼吸は普段と比べて問題ないと言えるか：${label(m.breathing, "はい", "いいえ", "不明")}`,
     `意識・反応は普段と同じと言えるか：${label(m.consciousness, "はい", "いいえ", "不明")}`,
-    `強制はしていない：${m.noForce ? "はい" : "未チェック"}`,
+    "服薬は実施できていない（未実施）",
   ];
 }
 
@@ -786,21 +782,11 @@ function screenMedicationMini() {
     v => model.medMiniLog.consciousness = v
   ));
 
-  const forceCard = div("card");
-  forceCard.appendChild(h2("強制はしていない"));
-  const forceRow = div("row");
-  const forceCb = document.createElement("input");
-  forceCb.type = "checkbox";
-  forceCb.checked = model.medMiniLog.noForce;
-  forceCb.style.width = "20px";
-  forceCb.style.height = "20px";
-  forceCb.onchange = () => { model.medMiniLog.noForce = forceCb.checked; render(); };
-  const forceText = document.createElement("div");
-  forceText.textContent = "本人に無理やり飲ませたわけではない";
-  forceRow.appendChild(forceCb);
-  forceRow.appendChild(forceText);
-  forceCard.appendChild(forceRow);
-  wrap.appendChild(forceCard);
+  const noteCard = div("card");
+  noteCard.appendChild(h2("固定の記録文言"));
+  noteCard.appendChild(div("muted", "この薬イベントは服薬が行われなかった前提で、以下の文言を記録に必ず出力します。"));
+  noteCard.appendChild(div("result observe", "服薬は実施できていない（未実施）"));
+  wrap.appendChild(noteCard);
 
   const action = div("card");
   action.appendChild(h2("保存して次へ（自動分岐）"));
