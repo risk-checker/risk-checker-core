@@ -1215,8 +1215,13 @@ function screenCall() {
   const emergencyWarn = document.createElement("div");
   emergencyWarn.className = "warn-box emergency-warn-box";
   const warnH = document.createElement("h3");
-  warnH.textContent = "夜勤が伝えてはいけないこと";
+  warnH.textContent = "家族へ「言ってはいけないこと」（禁止事項）";
   emergencyWarn.appendChild(warnH);
+  const warnCaution = div(
+    "small muted",
+    "※以下は例示であり、これらに限りません。\n（判断・評価・予測・原因推測・行動要求・責任表明などは行わない）"
+  );
+  emergencyWarn.appendChild(warnCaution);
   const warnList = document.createElement("ul");
   const items = [
     "「たぶん大丈夫です」「軽いと思います」などの評価・予測",
