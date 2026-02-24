@@ -225,7 +225,9 @@ function resetAll() {
   setState(STATE.START);
 }
 
-function anyYes(obj) {
+function anyRisk(obj) {
+  // In this release, "risk" means any explicit Yes (true).
+  // Data model: true = はい, false = いいえ, null = 未入力 (not allowed to confirm)
   return Object.values(obj).some(v => v === true);
 }
 
@@ -312,7 +314,7 @@ function q6AnswerLines() {
   const lines = [];
   Q6.forEach((q, i) => {
     const v = model.answers[q.id];
-    const mark = v === true ? "はい" : v === false ? "いいえ" : "未回答";
+    const mark = v === true ? "はい" : v === false ? "いいえ" : "";
     lines.push(`Q${i + 1} ${mark}：${q.text.replace(/\n/g, " ")}`);
   });
   return lines.join("\n");
@@ -939,18 +941,15 @@ function screenQ6(showMedication = false) {
 
     const r = div("row ans-row");
 
-    const bYes = btn("はい", () => { model.answers[q.id] = true; render(); }, "danger ansbtn");
-    const bNo  = btn("いいえ", () => { model.answers[q.id] = false; render(); }, "ansbtn");
-    const bNil = btn("未回答", () => { model.answers[q.id] = null; render(); }, "ansbtn");
+  const bYes = btn("はい", () => { model.answers[q.id] = true; render(); }, "danger ansbtn");
+  const bNo  = btn("いいえ", () => { model.answers[q.id] = false; render(); }, "ansbtn");
 
-    // Visual feedback (selected state)
-    if (model.answers[q.id] === true) bYes.classList.add("active");
-    if (model.answers[q.id] === false) bNo.classList.add("active");
-    if (model.answers[q.id] === null) bNil.classList.add("active");
+  // Visual feedback (selected state)
+  if (model.answers[q.id] === true) bYes.classList.add("active");
+  if (model.answers[q.id] === false) bNo.classList.add("active");
 
-    r.appendChild(bYes);
-    r.appendChild(bNo);
-    r.appendChild(bNil);
+  r.appendChild(bYes);
+  r.appendChild(bNo);
 
     card.appendChild(r);
 
@@ -969,7 +968,7 @@ function screenQ6(showMedication = false) {
 
   const undecided = Object.values(model.answers).some(v => v === null);
   const info = div("muted", undecided
-    ? "※ 未回答があります。すべて回答してから確定してください。"
+    ? "※ 回答が不足しています。すべて回答してから確定してください。"
     : "※ すべて回答済みです。"
   );
   foot.appendChild(info);
@@ -979,8 +978,8 @@ function screenQ6(showMedication = false) {
   const confirmBtn = btn("確定する", () => {
     // Guard: should be unreachable when disabled, but keep safe
     if (Object.values(model.answers).some(v => v === null)) return;
-    const summary = yesQuestionSummary();
-    const hasYes = anyYes(model.answers);
+  const summary = yesQuestionSummary();
+  const hasYes = anyRisk(model.answers);
     if (hasYes) {
       recordTimeline(`結果：救急車（${summary.short}）`);
       if (model.emsCall.status === "none") {
@@ -1023,7 +1022,7 @@ function screenCall() {
 
   const summary = yesQuestionSummary();
   const now = nowText();
-  const hasYes = anyYes(model.answers);
+  const hasYes = anyRisk(model.answers);
 
   const summaryCard = div("card emergency-summary-card");
   summaryCard.appendChild(h2("状態サマリ"));
@@ -1099,8 +1098,6 @@ function screenCall() {
   exceptionRow.appendChild(btn("例外を記録する", () => {
     model.emsCallFormOpen = true;
   render();
-  // Ensure the page starts at the top on initial load (prevent mid-page start)
-  try { if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') window.scrollTo(0, 0); } catch (e) { /* ignore */ }
   }));
   emsCallCard.appendChild(exceptionRow);
 
@@ -1110,6 +1107,15 @@ function screenCall() {
       { id: "no_connection", label: "つながらなかった" },
       { id: "other_route", label: "別ルートで対応（例：救急相談/医師指示 等）" },
     ];
+    const recordException = (reasonId) => {
+      model.emsCall.reason = reasonId;
+      model.emsCall.status = "exception";
+      model.emsCall.time = nowText();
+      const reasonLabel = emsReasonLabels[reasonId];
+      recordTimeline(`119通報：未実施（例外）／理由：${reasonLabel}`, model.emsCall.time);
+      model.emsCallFormOpen = false;
+      render();
+    };
     options.forEach(({ id, label }) => {
       const row = div("row");
       const radio = document.createElement("input");
@@ -1118,7 +1124,7 @@ function screenCall() {
       radio.value = id;
       radio.checked = model.emsCall.reason === id;
       radio.onchange = () => {
-        model.emsCall.reason = id;
+        recordException(id);
       };
       const text = document.createElement("div");
       text.textContent = label;
@@ -1128,17 +1134,6 @@ function screenCall() {
     });
 
     const actionRow = div("row");
-    const saveBtn = btn("例外として保存", () => {
-      if (!model.emsCall.reason) return;
-      model.emsCall.status = "exception";
-      model.emsCall.time = nowText();
-      const reasonLabel = emsReasonLabels[model.emsCall.reason];
-      recordTimeline(`119通報：未実施（例外）／理由：${reasonLabel}`, model.emsCall.time);
-      model.emsCallFormOpen = false;
-      render();
-    }, "primary big");
-    saveBtn.disabled = !model.emsCall.reason;
-    actionRow.appendChild(saveBtn);
     actionRow.appendChild(btn("閉じる", () => {
       model.emsCallFormOpen = false;
       render();
