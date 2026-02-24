@@ -1,13 +1,18 @@
-const CACHE_NAME = "night-checker-v2";
+const CACHE_NAME = "risk-checker-v2";
 const ASSETS = [
   "./",
-  "./night.html",
-  "./night.css",
-  "./night.js",
-  "./night.data.js",
+  "./risk.html",
+  "./risk.css",
+  "./risk.js",
+  "./risk.data.js",
   "./manifest.json",
-  "./icons/icon-192.png",
-  "./icons/icon-512.png"
+  "./assets/og-risk.png",
+  "./assets/icon-192.png",
+  "./assets/icon-512.png",
+  "./assets/apple-touch-icon.png",
+  "./assets/favicon-32.png",
+  "./assets/favicon-16.png",
+  "./assets/favicon.ico"
 ];
 
 self.addEventListener("install", (event) => {

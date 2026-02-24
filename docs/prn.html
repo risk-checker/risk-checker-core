@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>頓服ログ（事実記録）</title>
+    <style>
+      :root { --border:#e6e6e6; --muted:#666; --card:#f7f7f7; --danger:#b00020; }
+      body { font-family: system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif; margin:0; }
+      .wrap { max-width:760px; margin:0 auto; padding:18px 16px 32px; }
+      header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0 10px;}
+      h1{font-size:18px;margin:0;}
+      .tag{padding:2px 10px;border:1px solid var(--border);border-radius:999px;font-size:12px;color:var(--muted);background:#fff;}
+      .note{background:var(--card);border:1px solid var(--border);padding:12px 14px;border-radius:12px;margin:10px 0 14px;line-height:1.6;}
+      .card{border:1px solid var(--border);border-radius:14px;padding:12px;background:#fff;margin:10px 0;}
+      label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;}
+      select,input,textarea{width:100%;border:1px solid var(--border);border-radius:12px;padding:12px;font-size:16px;box-sizing:border-box;}
+      textarea{min-height:84px;resize:vertical;}
+      .actions{display:grid;gap:10px;margin-top:12px;}
+      button{width:100%;padding:14px;border-radius:14px;border:1px solid var(--border);background:#fff;font-size:16px;font-weight:700;text-align:left;}
+      button.primary{background:#111;color:#fff;border-color:#111;}
+      button.danger{background:#fff7f7;border-color:#ffd7d7;color:var(--danger);}
+      pre{white-space:pre-wrap;word-break:break-word;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px;font-size:13px;line-height:1.6;}
+      .links{margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;}
+      .links a{font-size:12px;color:inherit;text-decoration:underline;}
+      .hint{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6;}
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <h1>頓服ログ（事実記録）</h1>
+        <span class="tag">WIP</span>
+      </header>
+
+      <div class="note">
+        <strong>重要：</strong>この画面は<strong>判断・評価・診断をしません</strong>。<br />
+        ここで行うのは<strong>「実施した事実の記録」</strong>と、電子記録へ貼り付けるための<strong>定型テキスト生成</strong>だけです。<br />
+        <span style="color:var(--muted);font-size:12px;">※ 迷う／危険を感じる場合は「レッドフラッグ（6問）」へ。</span>
+      </div>
+
+      <div class="card">
+        <label for="event">何をしたか（事実）</label>
+        <select id="event">
+          <option value="given">頓服を渡した（使用）</option>
+          <option value="refused">本人が拒否した（未使用）</option>
+          <option value="no_stock">在庫がない（未使用）</option>
+          <option value="other">その他（メモに記載）</option>
+        </select>
+
+        <div style="height:10px;"></div>
+
+        <label for="drug">頓服（任意）</label>
+        <select id="drug">
+          <option value="">（未選択でも可）</option>
+          <option>カロナール</option>
+          <option>ロキソニン</option>
+          <option>下剤</option>
+          <option>不眠時薬</option>
+          <option>その他</option>
+        </select>
+
+        <div style="height:10px;"></div>
+
+        <label for="dose">量（任意）</label>
+        <input id="dose" placeholder="例：1錠 / 10mL / 1包" />
+
+        <div style="height:10px;"></div>
+
+        <label for="reason">本人の訴え（任意）</label>
+        <select id="reason">
+          <option value="">（未選択でも可）</option>
+          <option>頭痛（本人申告）</option>
+          <option>痛み（本人申告）</option>
+          <option>眠れない（本人申告）</option>
+          <option>その他（メモに記載）</option>
+        </select>
+
+        <div class="hint">※「重症度」や「正しさ」は記録しない。</div>
+
+        <div style="height:10px;"></div>
+
+        <label for="memo">メモ（任意・短く）</label>
+        <textarea id="memo" placeholder="例：落ち着かない訴え／服薬後は安静。評価・判断は書かない。"></textarea>
+
+        <div class="actions">
+          <button class="primary" id="btnBuild">📋 貼り付け用テキストを生成</button>
+          <button id="btnCopy">✅ クリップボードにコピー</button>
+          <button class="danger" id="btnToRF">🚨 レッドフラッグ（6問）を開く</button>
+        </div>
+
+        <div class="hint">
+          ・「使用した」ことは<strong>事実</strong>として残す。<br />
+          ・「効いた／効かない」は<strong>評価</strong>なのでここでは書かない。
+        </div>
+      </div>
+
+      <div class="card">
+        <label>生成結果（電子記録へ貼り付け）</label>
+        <pre id="out">（ここに生成されます）</pre>
+      </div>
+
+      <div class="links">
+        <a href="./hub.html">HUBへ戻る</a>
+  <a href="./risk.html">レッドフラッグ（6問）</a>
+      </div>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+
+      function nowText() {
+        const d = new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const da = String(d.getDate()).padStart(2, '0');
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        return `${y}/${m}/${da} ${hh}:${mm}`;
+      }
+
+      function buildText() {
+        const t = nowText();
+        const event = $('event').value;
+        const drug = $('drug').value || '（未選択）';
+        const dose = ($('dose').value || '').trim() || '（未記載）';
+        const reason = $('reason').value || '（未記載）';
+        const memo = ($('memo').value || '').trim() || '（なし）';
+
+        const eventLabel = {
+          given: '頓服を渡した（使用）',
+          refused: '本人が拒否した（未使用）',
+          no_stock: '在庫がない（未使用）',
+          other: 'その他',
+        }[event] || '（不明）';
+
+        return [
+          `【頓服ログ｜${t}】`,
+          `事実：${eventLabel}`,
+          `頓服：${drug} ／ 量：${dose}`,
+          `訴え：${reason}`,
+          `メモ：${memo}`,
+          `※判断・評価は行っていない（事実記録）`,
+        ].join('\\n');
+      }
+
+      $('btnBuild').addEventListener('click', () => {
+        $('out').textContent = buildText();
+      });
+
+      $('btnCopy').addEventListener('click', async () => {
+        const text = $('out').textContent;
+        try {
+          await navigator.clipboard.writeText(text);
+          $('btnCopy').textContent = '✅ コピーしました';
+          setTimeout(() => ($('btnCopy').textContent = '✅ クリップボードにコピー'), 1200);
+        } catch {
+          alert('コピーに失敗しました。手動で選択してコピーしてください。');
+        }
+      });
+
+      $('btnToRF').addEventListener('click', () => {
+  location.href = './risk.html';
+      });
+
+      $('out').textContent = buildText();
+    </script>
+  </body>
+</html>

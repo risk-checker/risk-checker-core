@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="体調不良時の事実確認チェック。診断や評価は行わず、Yes/No確認のみで対応判断を補助します。" />
+  <meta name="keywords" content="グループホーム, 救急車 判断, 119 判断, 経過観察, 見守り, 拒薬" />
+  <link rel="manifest" href="./manifest.json" />
+  <meta name="theme-color" content="#0b0c10" />
+  <meta property="og:title" content="リスク確認（6問）" />
+  <meta property="og:description" content="体調不良・ケガ・薬トラブル時の事実確認。診断はしない。Yes/Noだけ。" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://risk-checker.github.io/risk-checker-core/risk.html" />
+  <meta property="og:image" content="https://risk-checker.github.io/risk-checker-core/assets/og-risk.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="リスク確認（6問）" />
+  <meta name="twitter:description" content="体調不良・ケガ・薬トラブル時の事実確認。診断はしない。Yes/Noだけ。" />
+  <meta name="twitter:image" content="https://risk-checker.github.io/risk-checker-core/assets/og-risk.png" />
+  <link rel="icon" href="./assets/favicon.ico" />
+  <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="./assets/favicon-16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="./assets/apple-touch-icon.png" />
+  <title>risk checker</title>
+  <link rel="stylesheet" href="./risk.css" />
+  </head>
+
+  <body>
+    <div class="box">
+      <div class="row" style="justify-content: space-between; align-items: center;">
+  <h1>risk checker</h1>
+        <div>
+          <div id="theme-toggle"></div>
+          <div id="font-toggle" style="margin-top: 6px;"></div>
+        </div>
+      </div>
+
+      <div class="intro" style="margin: 12px 0 16px; padding: 12px; border: 1px solid rgba(255,255,255,0.12); border-radius: 10px;">
+        <div style="font-weight: 700; margin-bottom: 8px;">使い方（重要）</div>
+        <ul style="margin: 0; padding-left: 18px; line-height: 1.6;">
+          <li><b>体調不良・ケガ・薬トラブルの訴えがあったら</b>、まず <b>risk checker</b> を実施します（自己判断で飛ばさない）。</li>
+          <li>このツールは<b>診断・評価はしません</b>。<b>事実（Yes/No）</b>を残して、次の連絡・記録を<b>迷わず同じ手順</b>で行うためのものです。</li>
+          <li><b>「はい」が1つでも出たら</b>、原則は<b>救急（119）</b>。迷いが残る場合は<b>オンコール</b>に相談し、<b>結果（どの項目が「はい」か）をそのまま伝えます</b>。</li>
+          <li><b>「いいえ」でも不安が強い／翌日受診の希望がある場合</b>は、経過観察と記録を行い、<b>翌日以降の受診相談</b>につなぎます。</li>
+          <li><b>実施しない／記録がない場合</b>は、対応が<b>個人の判断</b>になりやすく、事故時の説明が困難になります。</li>
+        </ul>
+      </div>
+
+      <div id="view"></div>
+
+      <div class="note">
+        <ul>
+          <li>このページは試作です。</li>
+          <li>“OK”“安全”などの断定は出しません。</li>
+          <li>
+            必要なら GitHub 上の設計文書に戻る：
+            <a href="https://github.com/risk-checker/risk-checker-core" target="_blank" rel="noreferrer">repo</a>
+          </li>
+          <li>最終判断や評価をここではしません。担当者が自分を守り、現場の判断を減らすための事実確認です。</li>
+        </ul>
+      </div>
+    </div>
+
+  <script type="module" src="./risk.js"></script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("./sw.js").catch((err) => {
+            console.warn('ServiceWorker registration failed:', err);
+          });
+        });
+      }
+    </script>
+  </body>
+</html>

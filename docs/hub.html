@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HUB (WIP)</title>
+    <style>
+      :root {
+        --bg: #ffffff;
+        --fg: #111;
+        --muted: #666;
+        --border: #e6e6e6;
+        --card: #f7f7f7;
+      }
+      body {
+        font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+      }
+      .wrap {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 18px 16px 32px;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 8px 0 14px;
+      }
+      h1 {
+        font-size: 18px;
+        margin: 0;
+      }
+      .tag {
+        display: inline-block;
+        padding: 2px 10px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        font-size: 12px;
+        color: var(--muted);
+        background: #fff;
+        white-space: nowrap;
+      }
+      .note {
+        background: var(--card);
+        border: 1px solid var(--border);
+        padding: 12px 14px;
+        border-radius: 12px;
+        margin: 8px 0 14px;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+      .grid {
+        display: grid;
+        gap: 10px;
+        margin-top: 10px;
+      }
+      .btn {
+        display: block;
+        width: 100%;
+        padding: 14px 14px;
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background: #fff;
+        text-decoration: none;
+        color: inherit;
+        text-align: left;
+      }
+      .btn:active {
+        transform: translateY(1px);
+      }
+      .btn .top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .btn .title {
+        font-size: 16px;
+        font-weight: 700;
+        margin: 0;
+      }
+      .btn .sub {
+        margin: 6px 0 0;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .pill {
+        font-size: 12px;
+        padding: 2px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        background: #fff;
+        white-space: nowrap;
+      }
+      .danger {
+        border-color: #ffd7d7;
+        background: #fff7f7;
+      }
+      .danger .title {
+        color: #b00020;
+      }
+      footer {
+        margin-top: 16px;
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+      .links {
+        margin-top: 10px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .links a {
+        font-size: 12px;
+        color: inherit;
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="wrap">
+      <header>
+        <h1>HUB</h1>
+        <span class="tag">WIP</span>
+      </header>
+
+      <div class="note">
+        <strong>重要：</strong>この画面は<strong>判断・評価・診断をしません</strong>。<br />
+        ここで行うのは<strong>「次に開く画面の選択」</strong>だけです。
+      </div>
+
+      <div class="grid">
+  <a class="btn danger" href="./risk.html" aria-label="レッドフラッグ（6問）を開く">
+          <div class="top">
+            <div class="title">🚨 レッドフラッグ（6問）を開く</div>
+            <span class="pill">緊急</span>
+          </div>
+          <p class="sub">迷ったらここ。中でYes/No確認を行います。</p>
+        </a>
+
+        <a class="btn" href="./prn.html" aria-label="頓服ログ（事実記録）を開く">
+          <div class="top">
+            <div class="title">💊 頓服の記録（事実）</div>
+            <span class="pill">ログ</span>
+          </div>
+          <p class="sub">渡した／拒否／在庫なし等を記録し、カルテ貼付用テキストを生成します。</p>
+        </a>
+
+        <a class="btn" href="./memo.html" aria-label="様子見・メモを開く">
+          <div class="top">
+            <div class="title">👀 様子見・メモ（任意）</div>
+            <span class="pill">軽い</span>
+          </div>
+          <p class="sub">判断はしません。必要なら一行メモだけ残します。</p>
+        </a>
+      </div>
+
+      <div class="links">
+        <a href="./index.html">GitHub Pages 入口へ戻る</a>
+        <a href="https://github.com/risk-checker/risk-checker-core">GitHub</a>
+      </div>
+
+      <footer>
+        ※ 症状名（発熱/疼痛など）で分岐しません。<br />
+        ※ 頓服の可否判断はこの画面では行いません。
+      </footer>
+    </div>
+  </body>
+</html>

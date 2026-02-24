@@ -1,6 +1,6 @@
-import { STATE, Q6, SLEEP, MEDICATION_EVENTS } from "./night.data.js";
+import { STATE, Q6, SLEEP, MEDICATION_EVENTS } from "./risk.data.js";
 
-/* Remaining script moved from night.html: core logic and helpers */
+/* Remaining script moved from risk.html: core logic and helpers */
 
 const model = {
   state: STATE.START,
@@ -30,7 +30,7 @@ const model = {
 
 const $view = () => document.getElementById("view");
 
-// Ensure mount points exist (so UI doesn't disappear even if night.html is edited)
+// Ensure mount points exist (so UI doesn't disappear even if risk.html is edited)
 function ensureMount(id, afterId) {
   if (document.getElementById(id)) return;
   const after = document.getElementById(afterId);
@@ -47,7 +47,7 @@ function ensureMount(id, afterId) {
 // -------------------------------------------------
 // Font size toggle: normal / large (for 70s)
 // -------------------------------------------------
-const FONT_KEY = "night-font"; // normal | lg
+const FONT_KEY = "risk-font"; // normal | lg
 
 function applyFont(mode){
   document.documentElement.dataset.font = mode; // "normal" or "lg"
@@ -62,7 +62,7 @@ function initFont(){
 function renderFontToggle(){
   const wrap = document.getElementById("font-toggle");
   if (!wrap) {
-    // If night.html doesn't have #font-toggle, create it next to #theme-toggle
+  // If risk.html doesn't have #font-toggle, create it next to #theme-toggle
     ensureMount("font-toggle", "theme-toggle");
   }
   const mount = document.getElementById("font-toggle");
@@ -98,7 +98,7 @@ function renderFontToggle(){
 // -------------------------------------------------
 // Theme toggle (PC only): auto / light / dark
 // -------------------------------------------------
-const THEME_KEY = "night-theme"; // auto | light | dark
+const THEME_KEY = "risk-theme"; // auto | light | dark
 
 function applyTheme(mode){
   document.documentElement.dataset.theme = mode;
@@ -147,7 +147,7 @@ function initTheme(){
 // ================================
 // Facility info (local only)
 // ================================
-const FACILITY_KEY = "night-facility";
+const FACILITY_KEY = "risk-facility";
 
 const facility = {
   name: "",
@@ -332,7 +332,7 @@ function sleepAnswerLines() {
 
 function buildRecordText(extraTitle) {
   const t = [];
-  t.push("【夜間対応 記録用テキスト（貼り付け用）】");
+  t.push("【対応 記録用テキスト（貼り付け用）】");
   if (extraTitle) t.push(extraTitle);
   t.push("");
   t.push(`施設名：${facilityValue(facility.name)}`);
@@ -423,7 +423,7 @@ function buildRecordText(extraTitle) {
   }
 
   t.push("");
-  t.push("※本記録は診断・評価ではなく、夜間におけるYes/Noの事実確認ログです。");
+  t.push("※本記録は診断・評価ではなく、確認時のYes/Noの事実確認ログです。");
   return t.join("\n");
 }
 
@@ -575,7 +575,7 @@ const START_HINTS = [
 
 function screenStart() {
   const wrap = div("card");
-  wrap.appendChild(h2("夜間リスク確認（6問）"));
+  wrap.appendChild(h2("緊急リスク確認（6問）"));
   wrap.appendChild(div("muted", "今の状態を、そのまま答えてください"));
 
   const hint = document.createElement("div");
@@ -883,11 +883,11 @@ function screenQ6(showMedication = false) {
 
   // Header (concise, action-oriented)
   const head = div("card");
-  head.appendChild(h2("夜間リスク確認（6問）"));
+  head.appendChild(h2("緊急リスク確認（6問）"));
   head.appendChild(div("muted", "今の状態を、そのまま答えてください"));
 
   // Q0: pre-check annotation (do NOT request input here)
-  // Short guard-rail note intended to reduce extra decisions by night staff.
+  // Short guard-rail note intended to reduce extra decisions by staff.
   const q0note = div("note", 
     "※ 過去と同じ訴えで、今回も「いつもと違う点」が見当たらない場合は、\n" +
     "6問を省略して、今は様子を見る\n" +
@@ -1016,7 +1016,7 @@ function screenQ6(showMedication = false) {
 function screenCall() {
   const wrap = document.createElement("div");
 
-  // この画面は判断のためのものではなく、夜勤者が評価や責任を負わずに
+  // この画面は判断のためのものではなく、担当者が評価や責任を負わずに
   // 事実だけを伝えるための定型文を提供するUIです。
   // 最終判断・説明・評価はすべて医療機関へ戻します。
 
@@ -1175,7 +1175,7 @@ function screenCall() {
     "【ご連絡（事実通知）】",
     `施設の ${facilityValue(facility.name)} です。`,
     "",
-    "本日、夜間に利用者の体の状態を確認したところ、",
+  "本日、利用者の体の状態を確認したところ、",
     "医療機関での確認が必要と判断され、救急搬送となりました。",
     "",
     "確認できている事実としては、次の点があります。",
@@ -1206,7 +1206,7 @@ function screenCall() {
     "※評価・予測・約束は言いません。事実（体の状態）と搬送先（確定後）だけを伝えます。"
   ));
 
-  // 注意喚起ブロック（夜勤が伝えてはいけないこと）を家族説明の直後に配置
+  // 注意喚起ブロック（担当者が伝えてはいけないこと）を家族説明の直後に配置
   const emergencyWarn = document.createElement("div");
   emergencyWarn.className = "warn-box emergency-warn-box";
   const warnH = document.createElement("h3");
@@ -1234,7 +1234,7 @@ function screenCall() {
   emergencyWarn.appendChild(warnNote);
   familySection.appendChild(emergencyWarn);
 
-  // ※は読まない（夜勤の安全装置として表示のみ）
+  // ※は読まない（安全装置として表示のみ）
   const familyNote = div(
     "small muted",
     "読み上げ不要（画面用メモ）\n・これは診断や原因の判断ではなく、その時点で確認できていた体の状態（事実）です。\n・搬送後の対応や説明は医療機関の判断により行われます。"
@@ -1267,7 +1267,7 @@ function screenCall() {
   appendRecordLogCard(wrap, "（救急車表示）");
 
   const emergencyDisclaimer = div("note emergency-disclaimer",
-    "この文面は行動要求や診断を伝えるものではありません。診断や評価は病院（医師）が行います。夜勤は事実確認と搬送状況だけを共有します。"
+  "この文面は行動要求や診断を伝えるものではありません。診断や評価は病院（医師）が行います。担当者は事実確認と搬送状況だけを共有します。"
   );
   wrap.appendChild(emergencyDisclaimer);
 
@@ -1523,10 +1523,10 @@ function screenSleep() {
 
 function screenHandoff() {
   const card = div("card");
-  card.appendChild(h2("引き継ぎ（夜間の判断をここで止める）"));
+  card.appendChild(h2("引き継ぎ（判断をここで止める）"));
   card.appendChild(div("result observe",
     "ここから先（翌日通院、家族調整、服薬/生活対応の主体決定）は日勤帯。\n" +
-    "夜勤は『事実』と『実施した対応』だけを残す。"
+  "担当者は『事実』と『実施した対応』だけを残す。"
   ));
   card.appendChild(div("note",
     "残すもの（例）\n" +
@@ -1670,7 +1670,7 @@ function checkboxRow(label, checked, onChange) {
 }
 
 // boot: initialize UI after DOM is ready in a predictable order
-function bootNight() {
+function bootRisk() {
   try {
     initTheme();
     renderThemeToggle();
@@ -1680,7 +1680,7 @@ function bootNight() {
     render();
   } catch (e) {
     // swallow — in production we might log
-    console.error('bootNight error', e);
+  console.error('bootRisk error', e);
     const view = document.getElementById("view");
     if (view) {
       view.innerHTML = "";
@@ -1694,17 +1694,17 @@ function bootNight() {
 
 if (typeof document !== 'undefined') {
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bootNight);
+  document.addEventListener('DOMContentLoaded', bootRisk);
   } else {
     // already ready
-    setTimeout(bootNight, 0);
+  setTimeout(bootRisk, 0);
   }
 }
 
 // Expose a small debug API so users can trigger re-renders from DevTools.
 if (typeof window !== 'undefined') {
-  window.__night = window.__night || {};
-  Object.assign(window.__night, {
+  window.__risk = window.__risk || {};
+  Object.assign(window.__risk, {
     render,
     renderThemeToggle,
     renderFontToggle,

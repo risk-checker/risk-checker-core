@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>様子見・メモ（任意）</title>
+    <style>
+      :root { --border:#e6e6e6; --muted:#666; --card:#f7f7f7; }
+      body { font-family: system-ui, -apple-system, "Hiragino Sans","Noto Sans JP",sans-serif; margin:0; }
+      .wrap { max-width:760px; margin:0 auto; padding:18px 16px 32px; }
+      .note { background:var(--card); border:1px solid var(--border); padding:12px 14px; border-radius:12px; line-height:1.6; }
+      textarea { width:100%; border:1px solid var(--border); border-radius:12px; padding:12px; font-size:16px; margin-top:10px; min-height:90px; box-sizing:border-box; }
+      button,a.btn { display:block; width:100%; padding:14px; border-radius:14px; border:1px solid var(--border); background:#fff; font-weight:700; text-decoration:none; color:inherit; text-align:left; margin-top:10px; }
+      pre { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:12px; white-space:pre-wrap; word-break:break-word; }
+      .muted { color:var(--muted); font-size:12px; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1 style="margin:0 0 10px;font-size:18px;">様子見・メモ（任意）</h1>
+
+      <div class="note">
+        <strong>重要：</strong>この画面は<strong>判断・評価・診断をしません</strong>。<br />
+        「今は様子見で終了する」ことを許可するための画面です。<br />
+        必要なら<strong>一行メモ</strong>だけ生成して貼り付けできます。
+      </div>
+
+  <textarea id="memo" placeholder="例：少し落ち着かない様子。評価・判断は書かない。"></textarea>
+
+      <button id="build">📋 一行メモを生成</button>
+      <button id="copy">✅ クリップボードにコピー</button>
+
+      <div style="margin-top:10px;">
+        <div class="muted">生成結果（貼り付け用）</div>
+        <pre id="out">（ここに生成されます）</pre>
+      </div>
+
+  <a class="btn" href="./risk.html">🚨 状況が変わった → レッドフラッグ（6問）</a>
+      <a class="btn" href="./hub.html">← HUBへ戻る</a>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const nowText = () => {
+        const d = new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth()+1).padStart(2,'0');
+        const da = String(d.getDate()).padStart(2,'0');
+        const hh = String(d.getHours()).padStart(2,'0');
+        const mm = String(d.getMinutes()).padStart(2,'0');
+        return `${y}/${m}/${da} ${hh}:${mm}`;
+      };
+      const build = () => {
+        const t = nowText();
+        const memo = $('memo').value.trim() || '（メモなし）';
+        return `【様子見メモ｜${t}】\\nメモ：${memo}\\n※判断・評価は行っていない（記録）`;
+      };
+
+      $('build').addEventListener('click', () => $('out').textContent = build());
+      $('copy').addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText($('out').textContent);
+          $('copy').textContent = '✅ コピーしました';
+          setTimeout(() => $('copy').textContent = '✅ クリップボードにコピー', 1200);
+        } catch {
+          alert('コピーに失敗しました。手動で選択してコピーしてください。');
+        }
+      });
+
+      $('out').textContent = build();
+    </script>
+  </body>
+</html>

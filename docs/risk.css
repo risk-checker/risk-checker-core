@@ -10,6 +10,7 @@
   --muted: #666;
   --warn-bg: rgba(255, 244, 229, 0.95);
   --warn-border: rgba(222, 170, 110, 0.95);
+  --warn-fg: #111;
 
   --box-bg: #fff;
   --border: #e5e5e5;
@@ -41,8 +42,9 @@ html[data-theme="dark"] {
   --bg: #0b0c10;
   --fg: #f3f4f6;
   --muted: #a9adb7;
-  --warn-bg: rgba(40, 46, 56, 0.9);
-  --warn-border: rgba(138, 138, 153, 0.9);
+  --warn-bg: rgba(255, 244, 229, 0.95);
+  --warn-border: rgba(222, 170, 110, 0.95);
+  --warn-fg: #111;
 
   --box-bg: #0f1117;
   --border: #2a2f3a;
@@ -88,6 +90,9 @@ html[data-theme="dark"] {
     --result-observe-border: #2b4a86;
     --result-sleep-bg: #0f2413;
     --result-sleep-border: #2f6a3a;
+    --warn-bg: rgba(255, 244, 229, 0.95);
+    --warn-border: rgba(222, 170, 110, 0.95);
+    --warn-fg: #111;
   }
 }
 
@@ -188,6 +193,7 @@ h1 { margin: 0 0 8px; font-size: 22px; }
   padding: 12px 14px;
   border-radius: 8px;
   margin: 12px 0;
+  color: var(--warn-fg, var(--fg));
 }
 .warn-box h3 { margin: 0 0 8px; font-size: 14px; }
 .warn-box ul { margin: 0 0 8px 18px; }
@@ -524,7 +530,7 @@ button.danger { border-color: var(--result-call-border); }
 
 a { color: inherit; }
 /* =========================
-   Accessibility: 70s / Night shift
+  Accessibility: 70s / shift support
    ========================= */
 
 /* Default: slightly larger than usual */
